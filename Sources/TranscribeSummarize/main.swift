@@ -1,5 +1,5 @@
 // ABOUTME: Entry point for transcribe-summarize CLI.
-// ABOUTME: Implements ArgumentParser command with all CLI flags from vision spec.
+// ABOUTME: Orchestrates the full pipeline: extract, transcribe, diarise, summarise, output.
 
 import ArgumentParser
 import Foundation
@@ -57,14 +57,145 @@ struct TranscribeSummarize: AsyncParsableCommand {
         }
 
         if config.dryRun {
-            print("Dry run: would process \(config.inputFile)")
-            print("  Output: \(config.outputPath)")
-            print("  Model: \(config.model.rawValue)")
-            print("  LLM: \(config.llm)")
+            try await runDryRun(config: config)
             return
         }
 
-        // Pipeline execution will be added in subsequent phases
-        print("Processing: \(config.inputFile)")
+        try await runPipeline(config: config)
+    }
+
+    private func runDryRun(config: Config) async throws {
+        print("Dry run: would process \(config.inputFile)\n")
+
+        print("Configuration:")
+        print("  Output: \(config.outputPath)")
+        print("  Whisper model: \(config.model.rawValue)")
+        print("  LLM provider: \(config.llm)")
+        print("  Confidence threshold: \(Int(config.confidence * 100))%")
+        print("  Timestamps: \(config.timestamps)")
+        print()
+
+        let extractor = AudioExtractor(verbose: config.verbose)
+        if let info = try? await extractor.probe(config.inputFile) {
+            print("Audio Info:")
+            print("  Duration: \(MarkdownWriter.formatDuration(info.duration))")
+            print("  Format: \(info.codec), \(info.sampleRate)Hz, \(info.channels)ch")
+            print()
+        }
+
+        print("Dependencies:")
+        printDependencyStatus("ffmpeg")
+        printDependencyStatus("whisper-cpp")
+        printDependencyStatus("python3", optional: true, note: "for diarisation")
+        print()
+
+        print("Environment:")
+        printEnvStatus("ANTHROPIC_API_KEY", required: config.llm == "claude")
+        printEnvStatus("OPENAI_API_KEY", required: config.llm == "openai")
+        printEnvStatus("LLAMA_MODEL_PATH", required: config.llm == "llama")
+        printEnvStatus("HF_TOKEN", optional: true, note: "for diarisation")
+    }
+
+    private func runPipeline(config: Config) async throws {
+        var tempFiles: [String] = []
+        defer {
+            for file in tempFiles {
+                try? FileManager.default.removeItem(atPath: file)
+            }
+        }
+
+        // Step 1: Extract audio
+        if config.verbose > 0 { print("Extracting audio...") }
+        let extractor = AudioExtractor(verbose: config.verbose)
+        let (wavPath, audioInfo) = try await extractor.extract(from: config.inputFile)
+        tempFiles.append(wavPath)
+
+        if config.verbose > 0 {
+            print("Duration: \(MarkdownWriter.formatDuration(audioInfo.duration))")
+        }
+
+        // Step 2: Transcribe
+        if config.verbose > 0 { print("Transcribing...") }
+        let whisperModel = Transcriber.Model(rawValue: config.model.rawValue) ?? .base
+        let transcriber = Transcriber(model: whisperModel, verbose: config.verbose)
+        var segments = try await transcriber.transcribe(wavPath: wavPath)
+
+        if config.verbose > 0 {
+            print("Transcribed \(segments.count) segments")
+        }
+
+        // Step 3: Diarise (optional)
+        if config.verbose > 0 { print("Identifying speakers...") }
+        let diariser = Diariser(verbose: config.verbose, speakerNames: config.speakers)
+        segments = try await diariser.diarise(wavPath: wavPath, segments: segments)
+
+        // Step 4: Summarise
+        if config.verbose > 0 { print("Generating summary...") }
+        let transcriptText = segments.map { seg in
+            let speaker = seg.speaker ?? "Speaker"
+            return "[\(seg.startTimestamp)] \(speaker): \(seg.text)"
+        }.joined(separator: "\n")
+
+        guard let providerType = LLMProviderType(rawValue: config.llm) else {
+            fputs("Error: Invalid LLM provider: \(config.llm)\n", stderr)
+            throw ExitCode.failure
+        }
+
+        let provider = try providerType.createProvider(verbose: config.verbose)
+        var summary = try await provider.summarise(transcript: transcriptText)
+
+        // Fill in metadata
+        summary.duration = MarkdownWriter.formatDuration(audioInfo.duration)
+        summary.participants = Array(Set(segments.compactMap { $0.speaker })).sorted()
+        summary.confidenceRating = MarkdownWriter.calculateConfidenceRating(segments: segments)
+
+        if summary.title.isEmpty {
+            summary.title = MarkdownWriter.defaultTitle(from: config.inputFile)
+        }
+
+        // Step 5: Write output
+        if config.verbose > 0 { print("Writing output...") }
+        let writer = MarkdownWriter(
+            confidenceThreshold: config.confidence,
+            includeTimestamps: config.timestamps,
+            includeLowConfidence: true
+        )
+
+        try writer.write(summary: summary, segments: segments, to: config.outputPath)
+
+        print("Output written to: \(config.outputPath)")
+    }
+
+    private func printDependencyStatus(_ name: String, optional: Bool = false, note: String? = nil) {
+        let exists = commandExists(name)
+        let status = exists ? "✓" : (optional ? "○" : "✗")
+        var line = "  \(status) \(name)"
+        if let note = note { line += " (\(note))" }
+        if !exists && !optional { line += " — MISSING" }
+        print(line)
+    }
+
+    private func printEnvStatus(_ name: String, required: Bool = false, optional: Bool = false, note: String? = nil) {
+        let exists = ProcessInfo.processInfo.environment[name] != nil
+        let status = exists ? "✓" : (optional || !required ? "○" : "✗")
+        var line = "  \(status) \(name)"
+        if let note = note { line += " (\(note))" }
+        if !exists && required { line += " — NOT SET" }
+        print(line)
+    }
+
+    private func commandExists(_ command: String) -> Bool {
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/which")
+        process.arguments = [command]
+        process.standardOutput = FileHandle.nullDevice
+        process.standardError = FileHandle.nullDevice
+        do {
+            try process.run()
+            process.waitUntilExit()
+            return process.terminationStatus == 0
+        } catch {
+            return false
+        }
     }
 }
