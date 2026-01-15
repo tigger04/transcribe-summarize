@@ -1,0 +1,20 @@
+# transcribe-summarize configuration
+# Place in ~/.transcribe.yaml or ./.transcribe.yaml (local takes precedence)
+
+# Whisper model: tiny, base, small, medium, large
+model: base
+
+# Minimum confidence threshold (0.0-1.0)
+confidence: 0.8
+
+# Include timestamps in transcript output
+timestamps: true
+
+# LLM provider: claude, openai, llama
+llm: claude
+
+# Speaker names (optional, for diarisation)
+# speakers:
+#   - Alice
+#   - Bob
+#   - Charlie
