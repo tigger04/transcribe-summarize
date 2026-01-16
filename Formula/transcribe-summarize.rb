@@ -11,7 +11,7 @@ class TranscribeSummarize < Formula
   depends_on xcode: ["15.0", :build]
   depends_on "ffmpeg"
   depends_on "whisper-cpp"
-  depends_on "ollama" => :optional
+  depends_on "ollama"
 
   def install
     system "swift", "build", "-c", "release", "--disable-sandbox"
@@ -34,7 +34,7 @@ class TranscribeSummarize < Formula
         export ANTHROPIC_API_KEY="your_key"  # Claude (default)
         export OPENAI_API_KEY="your_key"     # OpenAI
 
-      For local LLM via Ollama (install with --with-ollama):
+      For local LLM via Ollama:
         brew services start ollama
         ollama pull mistral
         export OLLAMA_MODEL="mistral"
