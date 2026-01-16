@@ -1,5 +1,5 @@
 // ABOUTME: Entry point for transcribe-summarize CLI.
-// ABOUTME: Orchestrates the full pipeline: extract, transcribe, diarise, summarise, output.
+// ABOUTME: Orchestrates the full pipeline: extract, transcribe, diarize, summarize, output.
 
 import ArgumentParser
 import Foundation
@@ -15,7 +15,9 @@ struct TranscribeSummarize: AsyncParsableCommand {
             Example config:
               model: small
               llm: ollama
-              confidence: 0.85
+              ollama_model: mistral
+              anthropic_api_key: sk-ant-...
+              hf_token: hf_...
               speakers:
                 - Alice
                 - Bob
@@ -97,14 +99,14 @@ struct TranscribeSummarize: AsyncParsableCommand {
         print("Dependencies:")
         printDependencyStatus("ffmpeg")
         printDependencyStatus("whisper-cpp")
-        printDependencyStatus("python3", optional: true, note: "for diarisation")
+        printDependencyStatus("python3", optional: true, note: "for diarization")
         print()
 
         print("Environment:")
         printEnvStatus("ANTHROPIC_API_KEY", required: config.llm == "claude")
         printEnvStatus("OPENAI_API_KEY", required: config.llm == "openai")
         printEnvStatus("OLLAMA_MODEL", required: config.llm == "ollama")
-        printEnvStatus("HF_TOKEN", optional: true, note: "for diarisation")
+        printEnvStatus("HF_TOKEN", optional: true, note: "for diarization")
     }
 
     private func runPipeline(config: Config) async throws {
@@ -137,8 +139,8 @@ struct TranscribeSummarize: AsyncParsableCommand {
 
         // Step 3: Diarise (optional)
         if config.verbose > 0 { print("Identifying speakers...") }
-        let diariser = Diariser(verbose: config.verbose, speakerNames: config.speakers)
-        segments = try await diariser.diarise(wavPath: wavPath, segments: segments)
+        let diarizer = Diarizer(verbose: config.verbose, speakerNames: config.speakers)
+        segments = try await diarizer.diarize(wavPath: wavPath, segments: segments)
 
         // Step 4: Summarise
         if config.verbose > 0 { print("Generating summary...") }

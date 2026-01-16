@@ -2,7 +2,7 @@
 
 ## Overview
 
-A Swift CLI tool that transcribes audio files and produces structured markdown with speaker diarisation and LLM-generated summaries. Distributable via Homebrew.
+A Swift CLI tool that transcribes audio files and produces structured markdown with speaker diarization and LLM-generated summaries. Distributable via Homebrew.
 
 **Binary name:** `transcribe-summarize`
 
@@ -18,7 +18,7 @@ transcribe-summarize
 │       ├── Pipeline/
 │       │   ├── AudioExtractor.swift   # ffmpeg wrapper
 │       │   ├── Transcriber.swift      # whisper.cpp wrapper
-│       │   ├── Diariser.swift         # pyannote-audio wrapper
+│       │   ├── Diarizer.swift         # pyannote-audio wrapper
 │       │   └── Summariser.swift       # LLM provider abstraction
 │       ├── Providers/
 │       │   ├── LLMProvider.swift      # Protocol
@@ -43,8 +43,8 @@ transcribe-summarize
 |------|---------|---------|
 | ffmpeg | Audio extraction/conversion | `brew install ffmpeg` |
 | whisper.cpp | Transcription | `brew install whisper-cpp` |
-| Python 3.11+ | Diarisation runtime | `brew install python@3.11` |
-| pyannote-audio | Speaker diarisation | pip in venv |
+| Python 3.11+ | Diarization runtime | `brew install python@3.11` |
+| pyannote-audio | Speaker diarization | pip in venv |
 | Ollama | Local LLM | `brew install ollama` |
 
 ## Swift Dependencies (Package.swift)
@@ -81,13 +81,13 @@ transcribe-summarize
 
 **Deliverable:** Produces raw transcript with timestamps
 
-### Phase 4: Diarisation
+### Phase 4: Diarization
 
 1. Python helper script using pyannote-audio
-2. Diariser: subprocess wrapper calling Python script
-3. Merge diarisation segments with transcript segments
+2. Diarizer: subprocess wrapper calling Python script
+3. Merge diarization segments with transcript segments
 4. Speaker labelling (Speaker 1, 2, or provided names)
-5. Graceful fallback if diarisation fails
+5. Graceful fallback if diarization fails
 
 **Deliverable:** Transcript with speaker labels
 
@@ -141,12 +141,12 @@ Using subprocesses for external tools (ffmpeg, whisper.cpp, pyannote) and HTTP A
 - Avoids C/Python binding complexity
 - Tools can be upgraded independently
 
-### Diarisation Strategy
+### Diarization Strategy
 
 pyannote-audio requires Python. Options:
 
 1. **Chosen:** Bundle a Python helper script, call via subprocess
-2. Alternative: Require user to run diarisation separately
+2. Alternative: Require user to run diarization separately
 3. Future: Investigate Swift-native alternatives (CoreML?)
 
 ### Configuration Hierarchy
@@ -164,7 +164,7 @@ pyannote-audio requires Python. Options:
 
 1. `Package.swift` - Swift package manifest
 2. `Sources/TranscribeSummarize/*.swift` - All source files
-3. `scripts/diarize.py` - Python diarisation helper
+3. `scripts/diarize.py` - Python diarization helper
 4. `Tests/TranscribeSummarizeTests/*.swift` - Test files
 5. `Formula/transcribe-summarize.rb` - Homebrew formula
 6. `README.md` - Installation and usage
@@ -182,7 +182,7 @@ pyannote-audio requires Python. Options:
 ## Resolved Decisions
 
 1. **Whisper models:** Download on first run. Tool checks for model, downloads if missing.
-2. **HuggingFace token:** Diarisation is optional. Signpost user where to get token. Skip with warning if no token configured.
+2. **HuggingFace token:** Diarization is optional. Signpost user where to get token. Skip with warning if no token configured.
 3. **Binary name:** `transcribe-summarize`
 
 ## Risk Considerations

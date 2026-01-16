@@ -3,8 +3,8 @@
 
 import Foundation
 
-struct Diariser {
-    enum DiariseError: Error, LocalizedError {
+struct Diarizer {
+    enum DiarizeError: Error, LocalizedError {
         case pythonNotFound
         case venvSetupFailed(String)
         case scriptNotFound
@@ -19,18 +19,18 @@ struct Diariser {
             case .venvSetupFailed(let msg):
                 return "Failed to set up diarization environment: \(msg)"
             case .scriptNotFound:
-                return "Diarisation script not found"
+                return "Diarization script not found"
             case .noToken:
                 return "HuggingFace token not configured. Set HF_TOKEN environment variable."
             case .diarizationFailed(let msg):
-                return "Diarisation failed: \(msg)"
+                return "Diarization failed: \(msg)"
             case .parseError(let msg):
                 return "Failed to parse diarization output: \(msg)"
             }
         }
     }
 
-    struct DiariseSegment: Codable {
+    struct DiarizeSegment: Codable {
         let start: Double
         let end: Double
         let speaker: String
@@ -46,40 +46,39 @@ struct Diariser {
 
     /// Apply speaker labels to transcript segments.
     /// Returns segments with speaker field populated.
-    func diarise(wavPath: String, segments: [Segment]) async throws -> [Segment] {
-        let diariseSegments: [DiariseSegment]
+    func diarize(wavPath: String, segments: [Segment]) async throws -> [Segment] {
+        let diarizeSegments: [DiarizeSegment]
 
         do {
-            diariseSegments = try await runDiarisation(wavPath: wavPath)
-        } catch DiariseError.noToken {
+            diarizeSegments = try await runDiarization(wavPath: wavPath)
+        } catch DiarizeError.noToken {
             fputs("Warning: No HuggingFace token configured. Proceeding without speaker labels.\n", stderr)
             fputs("To enable diarization, get a token at: https://huggingface.co/settings/tokens\n", stderr)
             return segments
         } catch {
-            fputs("Warning: Diarisation failed: \(error.localizedDescription)\n", stderr)
+            fputs("Warning: Diarization failed: \(error.localizedDescription)\n", stderr)
             fputs("Proceeding without speaker labels.\n", stderr)
             return segments
         }
 
-        let speakerMap = buildSpeakerMap(from: diariseSegments)
+        let speakerMap = buildSpeakerMap(from: diarizeSegments)
 
         return segments.map { segment in
             var updated = segment
             updated.speaker = findSpeaker(
                 for: segment,
-                in: diariseSegments,
+                in: diarizeSegments,
                 speakerMap: speakerMap
             )
             return updated
         }
     }
 
-    private func runDiarisation(wavPath: String) async throws -> [DiariseSegment] {
-        let token = ProcessInfo.processInfo.environment["HF_TOKEN"]
-            ?? ProcessInfo.processInfo.environment["HUGGINGFACE_TOKEN"]
+    private func runDiarization(wavPath: String) async throws -> [DiarizeSegment] {
+        let token = ConfigStore.resolve(configKey: "hf_token", envKeys: ["HF_TOKEN", "HUGGINGFACE_TOKEN"])
 
         guard token != nil else {
-            throw DiariseError.noToken
+            throw DiarizeError.noToken
         }
 
         // Ensure venv exists (creates on first use)
@@ -87,12 +86,12 @@ struct Diariser {
 
         let pythonExec = pythonPath()
         guard FileManager.default.isExecutableFile(atPath: pythonExec) else {
-            throw DiariseError.pythonNotFound
+            throw DiarizeError.pythonNotFound
         }
 
         let scriptPath = findDiariseScript()
         guard FileManager.default.fileExists(atPath: scriptPath) else {
-            throw DiariseError.scriptNotFound
+            throw DiarizeError.scriptNotFound
         }
 
         if verbose > 0 {
@@ -115,16 +114,16 @@ struct Diariser {
 
         if let errorResponse = try? JSONDecoder().decode([String: String].self, from: outputData),
            let error = errorResponse["error"] {
-            throw DiariseError.diarizationFailed(error)
+            throw DiarizeError.diarizationFailed(error)
         }
 
         guard process.terminationStatus == 0 else {
             let stderrData = stderrPipe.fileHandleForReading.readDataToEndOfFile()
             let stderr = String(data: stderrData, encoding: .utf8) ?? "Unknown error"
-            throw DiariseError.diarizationFailed(stderr)
+            throw DiarizeError.diarizationFailed(stderr)
         }
 
-        return try JSONDecoder().decode([DiariseSegment].self, from: outputData)
+        return try JSONDecoder().decode([DiarizeSegment].self, from: outputData)
     }
 
     private func venvPath() -> URL {
@@ -143,7 +142,7 @@ struct Diariser {
 
         // Check system python3 exists
         guard commandExists("python3") else {
-            throw DiariseError.pythonNotFound
+            throw DiarizeError.pythonNotFound
         }
 
         fputs("Setting up diarization environment (one-time)...\n", stderr)
@@ -166,7 +165,7 @@ struct Diariser {
         createVenv.waitUntilExit()
 
         guard createVenv.terminationStatus == 0 else {
-            throw DiariseError.venvSetupFailed("Failed to create virtual environment")
+            throw DiarizeError.venvSetupFailed("Failed to create virtual environment")
         }
 
         // Install dependencies
@@ -184,10 +183,10 @@ struct Diariser {
         guard installDeps.terminationStatus == 0 else {
             // Clean up failed venv
             try? FileManager.default.removeItem(at: venv)
-            throw DiariseError.venvSetupFailed("Failed to install Python dependencies")
+            throw DiarizeError.venvSetupFailed("Failed to install Python dependencies")
         }
 
-        fputs("Diarisation environment ready.\n", stderr)
+        fputs("Diarization environment ready.\n", stderr)
     }
 
     private func pythonPath() -> String {
@@ -230,7 +229,7 @@ struct Diariser {
         return "./scripts/diarize.py"
     }
 
-    private func buildSpeakerMap(from segments: [DiariseSegment]) -> [String: String] {
+    private func buildSpeakerMap(from segments: [DiarizeSegment]) -> [String: String] {
         var seen = Set<String>()
         var orderedSpeakers: [String] = []
 
@@ -253,16 +252,16 @@ struct Diariser {
         return map
     }
 
-    private func findSpeaker(for segment: Segment, in diariseSegments: [DiariseSegment], speakerMap: [String: String]) -> String {
+    private func findSpeaker(for segment: Segment, in diarizeSegments: [DiarizeSegment], speakerMap: [String: String]) -> String {
         let midpoint = (segment.start + segment.end) / 2
 
-        for dSeg in diariseSegments {
+        for dSeg in diarizeSegments {
             if midpoint >= dSeg.start && midpoint <= dSeg.end {
                 return speakerMap[dSeg.speaker] ?? dSeg.speaker
             }
         }
 
-        let nearest = diariseSegments.min(by: { seg1, seg2 in
+        let nearest = diarizeSegments.min(by: { seg1, seg2 in
             let dist1 = abs(midpoint - (seg1.start + seg1.end) / 2)
             let dist2 = abs(midpoint - (seg2.start + seg2.end) / 2)
             return dist1 < dist2

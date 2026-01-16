@@ -107,9 +107,17 @@ llm: ollama
 speakers:
   - Alice
   - Bob
+
+# API keys (optional, can also use environment variables)
+ollama_model: mistral
+anthropic_api_key: sk-ant-...
+openai_api_key: sk-...
+hf_token: hf_...
 ```
 
 Config priority: local `.transcribe.yaml` > `~/.config/transcribe-summarize/config.yaml` > legacy `~/.transcribe.yaml`
+
+API keys can be set in config file or environment variables; config takes precedence.
 
 ## Output Format
 

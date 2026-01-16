@@ -4,6 +4,67 @@
 import Foundation
 import Yams
 
+/// Shared access to YAML config for token resolution.
+/// Tokens can be set in config file or environment variables; config takes precedence.
+enum ConfigStore {
+    private static var yamlConfig: [String: Any]?
+    private static var isLoaded = false
+
+    static func load() {
+        guard !isLoaded else { return }
+        yamlConfig = loadYAMLConfig()
+        isLoaded = true
+    }
+
+    /// Resolve a value from config file first, then environment variable.
+    static func resolve(configKey: String, envKey: String) -> String? {
+        load()
+        if let value = yamlConfig?[configKey] as? String, !value.isEmpty {
+            return value
+        }
+        return ProcessInfo.processInfo.environment[envKey]
+    }
+
+    /// Resolve with multiple possible environment variable names.
+    static func resolve(configKey: String, envKeys: [String]) -> String? {
+        load()
+        if let value = yamlConfig?[configKey] as? String, !value.isEmpty {
+            return value
+        }
+        for key in envKeys {
+            if let value = ProcessInfo.processInfo.environment[key] {
+                return value
+            }
+        }
+        return nil
+    }
+
+    private static func loadYAMLConfig() -> [String: Any]? {
+        let fm = FileManager.default
+
+        let localPath = ".transcribe.yaml"
+        let xdgConfigPath = NSHomeDirectory() + "/.config/transcribe-summarize/config.yaml"
+        let legacyHomePath = NSHomeDirectory() + "/.transcribe.yaml"
+
+        var configPath: String?
+        if fm.fileExists(atPath: localPath) {
+            configPath = localPath
+        } else if fm.fileExists(atPath: xdgConfigPath) {
+            configPath = xdgConfigPath
+        } else if fm.fileExists(atPath: legacyHomePath) {
+            configPath = legacyHomePath
+        }
+
+        guard let path = configPath,
+              let contents = fm.contents(atPath: path),
+              let yaml = String(data: contents, encoding: .utf8) else {
+            return nil
+        }
+
+        return try? Yams.load(yaml: yaml) as? [String: Any]
+    }
+}
+
 struct Config {
     let inputFile: String
     let outputPath: String

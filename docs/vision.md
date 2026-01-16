@@ -14,12 +14,12 @@ A CLI script that transcribes audio from any media file and produces a structure
   - Corrupted/unreadable files
   - Poor audio quality (with confidence threshold)
 
-## Speaker Identification (Diarisation)
+## Speaker Identification (Diarization)
 
 - Identify and label different speakers in the transcript
 - Default to "Speaker 1", "Speaker 2", etc.
 - Optional: provide known speaker names via CLI flag or config file to map to identified voices
-- If diarisation fails: proceed with unlabelled transcript and warn user
+- If diarization fails: proceed with unlabelled transcript and warn user
 
 ## Output Structure
 
@@ -91,7 +91,7 @@ Priority order (highest to lowest):
 ## Dependencies
 
 - Transcription: whisper.cpp (preferred for Apple Silicon) or openai-whisper
-- Diarisation: pyannote-audio or equivalent
+- Diarization: pyannote-audio or equivalent
 - Audio processing: ffmpeg
 - LLM for summarisation: Claude API or local model
 

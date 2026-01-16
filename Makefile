@@ -27,7 +27,7 @@ install: build
 	install -m 755 .build/release/transcribe-summarize /usr/local/bin/
 	install -d /usr/local/share/transcribe-summarize
 	install -m 644 scripts/diarize.py /usr/local/share/transcribe-summarize/
-	@echo "Installed. Diarisation venv will be created on first use."
+	@echo "Installed. Diarization venv will be created on first use."
 
 install-venv:
 	@echo "Setting up Python virtual environment for diarization..."
@@ -35,7 +35,7 @@ install-venv:
 	@python3 -m venv $(VENV_DIR)
 	@$(VENV_DIR)/bin/pip install --upgrade pip --quiet
 	@$(VENV_DIR)/bin/pip install pyannote.audio torch --quiet
-	@echo "Diarisation environment ready at $(VENV_DIR)"
+	@echo "Diarization environment ready at $(VENV_DIR)"
 
 uninstall:
 	rm -f /usr/local/bin/transcribe-summarize

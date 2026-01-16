@@ -9,12 +9,12 @@ struct OllamaProvider: LLMProvider {
     private let baseURL: String
 
     init(verbose: Int = 0) throws {
-        guard let model = ProcessInfo.processInfo.environment["OLLAMA_MODEL"] else {
-            throw LLMError.missingAPIKey("OLLAMA_MODEL not set (e.g., mistral, llama3)")
+        guard let model = ConfigStore.resolve(configKey: "ollama_model", envKey: "OLLAMA_MODEL") else {
+            throw LLMError.missingAPIKey("OLLAMA_MODEL not set (config or env, e.g., mistral, llama3)")
         }
         self.model = model
         self.verbose = verbose
-        self.baseURL = ProcessInfo.processInfo.environment["OLLAMA_HOST"]
+        self.baseURL = ConfigStore.resolve(configKey: "ollama_host", envKey: "OLLAMA_HOST")
             ?? "http://localhost:11434"
     }
 
