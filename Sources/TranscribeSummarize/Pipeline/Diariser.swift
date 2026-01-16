@@ -14,7 +14,7 @@ struct Diariser {
         var errorDescription: String? {
             switch self {
             case .pythonNotFound:
-                return "Python 3 not found. Install with: brew install python@3.11"
+                return "Python environment not found. Run: make install-venv"
             case .scriptNotFound:
                 return "Diarisation script not found"
             case .noToken:
@@ -72,7 +72,8 @@ struct Diariser {
     }
 
     private func runDiarisation(wavPath: String) async throws -> [DiariseSegment] {
-        guard commandExists("python3") else {
+        let pythonExec = pythonPath()
+        guard FileManager.default.isExecutableFile(atPath: pythonExec) || commandExists(pythonExec) else {
             throw DiariseError.pythonNotFound
         }
 
@@ -93,8 +94,13 @@ struct Diariser {
         }
 
         let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
-        process.arguments = ["python3", scriptPath, wavPath]
+        if pythonExec == "/usr/bin/env" {
+            process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
+            process.arguments = ["python3", scriptPath, wavPath]
+        } else {
+            process.executableURL = URL(fileURLWithPath: pythonExec)
+            process.arguments = [scriptPath, wavPath]
+        }
 
         let stdoutPipe = Pipe()
         let stderrPipe = Pipe()
@@ -118,6 +124,25 @@ struct Diariser {
         }
 
         return try JSONDecoder().decode([DiariseSegment].self, from: outputData)
+    }
+
+    private func pythonPath() -> String {
+        // Prefer managed venv in user's home directory
+        let homeVenv = FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent(".local/share/transcribe-summarize/venv/bin/python3")
+            .path
+        if FileManager.default.isExecutableFile(atPath: homeVenv) {
+            return homeVenv
+        }
+
+        // Fallback for Homebrew install location
+        let brewVenv = "/usr/local/share/transcribe-summarize/venv/bin/python3"
+        if FileManager.default.isExecutableFile(atPath: brewVenv) {
+            return brewVenv
+        }
+
+        // Last resort: system python3
+        return "/usr/bin/env"
     }
 
     private func findDiariseScript() -> String {

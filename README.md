@@ -2,6 +2,37 @@
 
 Transcribe audio files and generate structured meeting summaries with speaker identification.
 
+## Quickstart
+
+```bash
+brew install tigger04/tap/transcribe-summarize
+```
+
+Basic usage:
+
+```bash
+transcribe-summarize meeting.m4a
+```
+
+### Optional: Speaker Diarisation
+
+To identify who said what, set a HuggingFace token:
+
+1. Create account: https://huggingface.co
+2. Accept license: https://huggingface.co/pyannote/speaker-diarization-3.1
+3. Generate token: https://huggingface.co/settings/tokens
+4. `export HF_TOKEN="your_token"`
+
+### LLM Configuration
+
+For AI-powered summaries, set one of:
+
+```bash
+export ANTHROPIC_API_KEY="sk-ant-..."  # Claude (default)
+export OPENAI_API_KEY="sk-..."         # OpenAI
+export LLAMA_MODEL_PATH="/path/to/model.gguf"  # Local
+```
+
 ## Features
 
 - Transcribe audio from any media file (m4a, mp4, wav, mp3, opus, webm)
@@ -10,30 +41,25 @@ Transcribe audio files and generate structured meeting summaries with speaker id
 - Configurable output format with confidence indicators
 - Fast processing on Apple Silicon via whisper.cpp
 
-## Installation
+## Installation from Source
 
-### From Source
-
-```bash
-git clone https://github.com/tigger04/transcribe-recording.git
-cd transcribe-recording
-make build
-make install
-```
-
-### Dependencies
+### Prerequisites
 
 ```bash
 brew install ffmpeg whisper-cpp
 ```
 
-Optional (for speaker diarisation):
+### Build and Install
+
 ```bash
-brew install python@3.11
-pip install pyannote.audio torch
+git clone https://github.com/tigger04/transcribe-recording.git
+cd transcribe-recording
+make install
 ```
 
-## Quick Start
+This builds the binary and sets up the Python environment for speaker diarisation.
+
+## Usage
 
 ```bash
 # Basic usage
@@ -45,8 +71,6 @@ transcribe-summarize meeting.m4a -o summary.md --model small -v
 # Dry run (show what would happen)
 transcribe-summarize meeting.m4a --dry-run
 ```
-
-## Configuration
 
 ### CLI Flags
 
@@ -72,34 +96,6 @@ llm: claude
 speakers:
   - Alice
   - Bob
-```
-
-### Environment Variables
-
-```bash
-# LLM API keys
-export ANTHROPIC_API_KEY="sk-ant-..."
-export OPENAI_API_KEY="sk-..."
-export LLAMA_MODEL_PATH="/path/to/model.gguf"
-
-# Speaker diarisation
-export HF_TOKEN="hf_..."
-```
-
-## Speaker Diarisation Setup
-
-Speaker identification requires pyannote-audio:
-
-```bash
-# Install dependencies
-pip install pyannote.audio torch
-
-# Get HuggingFace token
-# 1. Create account: https://huggingface.co
-# 2. Accept license: https://huggingface.co/pyannote/speaker-diarization-3.1
-# 3. Generate token: https://huggingface.co/settings/tokens
-
-export HF_TOKEN="your_token"
 ```
 
 ## Output Format
