@@ -19,25 +19,29 @@ class TranscribeSummarize < Formula
     (share/"transcribe-summarize").install "scripts/diarize.py"
   end
 
+  def post_install
+    # Pull mistral model so it works out of the box
+    system "ollama", "pull", "mistral"
+  end
+
   def caveats
     <<~EOS
-      Speaker diarization requires a one-time setup on first use.
-      The tool will automatically install Python dependencies when needed.
+      Ollama and the mistral model have been installed.
 
-      To enable diarization:
-        1. Create account at https://huggingface.co
-        2. Accept model license at https://huggingface.co/pyannote/speaker-diarization-3.1
-        3. Generate token at https://huggingface.co/settings/tokens
-        4. Set: export HF_TOKEN="your_token"
+      To use local LLM summarization (no API key needed):
+        brew services start ollama
+        export OLLAMA_MODEL="mistral"
+        transcribe-summarize --llm ollama meeting.m4a
 
-      For LLM summarization, set one of:
+      Or use cloud LLM providers:
         export ANTHROPIC_API_KEY="your_key"  # Claude (default)
         export OPENAI_API_KEY="your_key"     # OpenAI
 
-      For local LLM via Ollama:
-        brew services start ollama
-        ollama pull mistral
-        export OLLAMA_MODEL="mistral"
+      For speaker diarization (optional):
+        1. Create account at https://huggingface.co
+        2. Accept license at https://huggingface.co/pyannote/speaker-diarization-3.1
+        3. Generate token at https://huggingface.co/settings/tokens
+        4. Set: export HF_TOKEN="your_token"
     EOS
   end
 
