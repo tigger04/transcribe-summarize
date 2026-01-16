@@ -10,10 +10,13 @@ confidence: 0.8
 # Include timestamps in transcript output
 timestamps: true
 
-# LLM provider: claude, openai, llama
+# LLM provider: claude, openai, ollama
 llm: claude
 
-# Speaker names (optional, for diarisation)
+# For Ollama, also set OLLAMA_MODEL env var (e.g., mistral, llama3)
+# llm: ollama
+
+# Speaker names (optional, for diarization)
 # speakers:
 #   - Alice
 #   - Bob

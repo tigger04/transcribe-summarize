@@ -11,6 +11,7 @@ class TranscribeSummarize < Formula
   depends_on xcode: ["15.0", :build]
   depends_on "ffmpeg"
   depends_on "whisper-cpp"
+  depends_on "ollama" => :optional
 
   def install
     system "swift", "build", "-c", "release", "--disable-sandbox"
@@ -29,10 +30,14 @@ class TranscribeSummarize < Formula
         3. Generate token at https://huggingface.co/settings/tokens
         4. Set: export HF_TOKEN="your_token"
 
-      For LLM summarisation, set one of:
+      For LLM summarization, set one of:
         export ANTHROPIC_API_KEY="your_key"  # Claude (default)
         export OPENAI_API_KEY="your_key"     # OpenAI
-        export LLAMA_MODEL_PATH="/path/to/model.gguf"  # Local
+
+      For local LLM via Ollama (install with --with-ollama):
+        brew services start ollama
+        ollama pull mistral
+        export OLLAMA_MODEL="mistral"
     EOS
   end
 

@@ -30,7 +30,7 @@ struct TranscribeSummarize: AsyncParsableCommand {
     @Option(name: [.short, .long], help: "Whisper model size (tiny, base, small, medium, large)")
     var model: String = "base"
 
-    @Option(name: .long, help: "LLM provider: claude, openai, llama (default: claude)")
+    @Option(name: .long, help: "LLM provider: claude, openai, ollama (default: claude)")
     var llm: String = "claude"
 
     @Flag(name: [.short, .long], help: "Increase logging verbosity")
@@ -92,7 +92,7 @@ struct TranscribeSummarize: AsyncParsableCommand {
         print("Environment:")
         printEnvStatus("ANTHROPIC_API_KEY", required: config.llm == "claude")
         printEnvStatus("OPENAI_API_KEY", required: config.llm == "openai")
-        printEnvStatus("LLAMA_MODEL_PATH", required: config.llm == "llama")
+        printEnvStatus("OLLAMA_MODEL", required: config.llm == "ollama")
         printEnvStatus("HF_TOKEN", optional: true, note: "for diarisation")
     }
 

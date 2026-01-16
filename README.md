@@ -33,7 +33,15 @@ For AI-powered summaries, set one of:
 ```bash
 export ANTHROPIC_API_KEY="sk-ant-..."  # Claude (default)
 export OPENAI_API_KEY="sk-..."         # OpenAI
-export LLAMA_MODEL_PATH="/path/to/model.gguf"  # Local
+export OLLAMA_MODEL="mistral"          # Local via Ollama
+```
+
+For Ollama, install and start the service first:
+
+```bash
+brew install ollama
+brew services start ollama
+ollama pull mistral  # or llama3, codellama, etc.
 ```
 
 ## Features
@@ -84,7 +92,7 @@ transcribe-summarize meeting.m4a --dry-run
 | `-t, --timestamps` | Include timestamps | `true` |
 | `-c, --confidence` | Minimum confidence threshold | `0.8` |
 | `-m, --model` | Whisper model (tiny/base/small/medium/large) | `base` |
-| `--llm` | LLM provider (claude/openai/llama) | `claude` |
+| `--llm` | LLM provider (claude/openai/ollama) | `claude` |
 | `-v` | Verbosity (-v, -vv, -vvv) | quiet |
 | `--dry-run` | Show what would be done | - |
 

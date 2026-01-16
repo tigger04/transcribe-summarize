@@ -1,5 +1,5 @@
 // ABOUTME: Protocol defining the interface for LLM providers.
-// ABOUTME: Implementations: Claude, OpenAI, Llama.
+// ABOUTME: Implementations: Claude, OpenAI, Ollama.
 
 import Foundation
 
@@ -10,7 +10,7 @@ protocol LLMProvider {
 enum LLMProviderType: String, CaseIterable {
     case claude
     case openai
-    case llama
+    case ollama
 
     func createProvider(verbose: Int) throws -> LLMProvider {
         switch self {
@@ -18,8 +18,8 @@ enum LLMProviderType: String, CaseIterable {
             return try ClaudeProvider(verbose: verbose)
         case .openai:
             return try OpenAIProvider(verbose: verbose)
-        case .llama:
-            return LlamaProvider(verbose: verbose)
+        case .ollama:
+            return try OllamaProvider(verbose: verbose)
         }
     }
 }

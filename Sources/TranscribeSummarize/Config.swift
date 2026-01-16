@@ -92,7 +92,7 @@ struct Config {
             return false
         }
 
-        let validLLMs = ["claude", "openai", "llama"]
+        let validLLMs = ["claude", "openai", "ollama"]
         guard validLLMs.contains(llm) else {
             fputs("Error: Invalid LLM provider: \(llm)\n", stderr)
             fputs("Valid providers: \(validLLMs.joined(separator: ", "))\n", stderr)
