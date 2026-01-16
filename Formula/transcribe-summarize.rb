@@ -16,7 +16,7 @@ class TranscribeSummarize < Formula
   def install
     system "swift", "build", "-c", "release", "--disable-sandbox"
     bin.install ".build/release/transcribe-summarize"
-    (share/"transcribe-summarize").install "scripts/diarize.py"
+    pkgshare.install "scripts/diarize.py"
   end
 
   def post_install

@@ -217,7 +217,8 @@ struct Diariser {
         let candidates = [
             Bundle.main.bundlePath + "/scripts/diarize.py",
             "./scripts/diarize.py",
-            "/usr/local/share/transcribe-summarize/diarize.py"
+            "/opt/homebrew/share/transcribe-summarize/diarize.py",  // ARM Mac
+            "/usr/local/share/transcribe-summarize/diarize.py"      // Intel Mac
         ]
 
         for path in candidates {
