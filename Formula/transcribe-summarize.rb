@@ -10,8 +10,8 @@ class TranscribeSummarize < Formula
 
   depends_on xcode: ["15.0", :build]
   depends_on "ffmpeg"
-  depends_on "whisper-cpp"
   depends_on "ollama"
+  depends_on "whisper-cpp"
 
   def install
     system "swift", "build", "-c", "release", "--disable-sandbox"
