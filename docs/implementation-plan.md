@@ -45,7 +45,7 @@ transcribe-summarize
 | whisper.cpp | Transcription | `brew install whisper-cpp` |
 | Python 3.11+ | Diarisation runtime | `brew install python@3.11` |
 | pyannote-audio | Speaker diarisation | pip in venv |
-| llama.cpp | Local LLM (optional) | `brew install llama.cpp` |
+| Ollama | Local LLM | `brew install ollama` |
 
 ## Swift Dependencies (Package.swift)
 
@@ -96,7 +96,7 @@ transcribe-summarize
 1. LLMProvider protocol
 2. ClaudeProvider (Anthropic API)
 3. OpenAIProvider (OpenAI API)
-4. LlamaProvider (llama.cpp subprocess)
+4. OllamaProvider (Ollama HTTP API)
 5. Prompt engineering for summary structure
 6. API key management (env vars, config file)
 
@@ -134,7 +134,7 @@ transcribe-summarize
 
 ### Subprocess vs Native Integration
 
-Using subprocesses for external tools (ffmpeg, whisper.cpp, pyannote, llama.cpp):
+Using subprocesses for external tools (ffmpeg, whisper.cpp, pyannote) and HTTP APIs (Claude, OpenAI, Ollama):
 
 - Simpler implementation
 - Matches existing CLI tool patterns
@@ -154,9 +154,10 @@ pyannote-audio requires Python. Options:
 ```
 1. CLI flags (highest priority)
 2. .transcribe.yaml in current directory
-3. ~/.transcribe.yaml
-4. Environment variables (TRANSCRIBE_*)
-5. Compiled defaults
+3. ~/.config/transcribe-summarize/config.yaml
+4. ~/.transcribe.yaml (legacy, for backwards compatibility)
+5. Environment variables (TRANSCRIBE_*)
+6. Compiled defaults
 ```
 
 ## Files to Create

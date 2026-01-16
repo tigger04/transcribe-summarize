@@ -14,7 +14,7 @@ Basic usage:
 transcribe-summarize meeting.m4a
 ```
 
-### Optional: Speaker Diarisation
+### Optional: Speaker Diarization
 
 To identify who said what, set a HuggingFace token:
 
@@ -28,20 +28,19 @@ environment for diarization (one-time, ~800MB download).
 
 ### LLM Configuration
 
-For AI-powered summaries, set one of:
+Ollama and the mistral model are installed automatically. For local summarization (no API key needed):
+
+```bash
+brew services start ollama
+export OLLAMA_MODEL="mistral"
+transcribe-summarize --llm ollama meeting.m4a
+```
+
+Or use cloud providers:
 
 ```bash
 export ANTHROPIC_API_KEY="sk-ant-..."  # Claude (default)
 export OPENAI_API_KEY="sk-..."         # OpenAI
-export OLLAMA_MODEL="mistral"          # Local via Ollama
-```
-
-For Ollama, install and start the service first:
-
-```bash
-brew install ollama
-brew services start ollama
-ollama pull mistral  # or llama3, codellama, etc.
 ```
 
 ## Features
@@ -57,7 +56,8 @@ ollama pull mistral  # or llama3, codellama, etc.
 ### Prerequisites
 
 ```bash
-brew install ffmpeg whisper-cpp
+brew install ffmpeg whisper-cpp ollama
+ollama pull mistral
 ```
 
 ### Build and Install
@@ -98,16 +98,18 @@ transcribe-summarize meeting.m4a --dry-run
 
 ### Config File
 
-Create `.transcribe.yaml` in your home directory or project:
+Create `~/.config/transcribe-summarize/config.yaml` or `.transcribe.yaml` in your project:
 
 ```yaml
 model: small
 confidence: 0.85
-llm: claude
+llm: ollama
 speakers:
   - Alice
   - Bob
 ```
+
+Config priority: local `.transcribe.yaml` > `~/.config/transcribe-summarize/config.yaml` > legacy `~/.transcribe.yaml`
 
 ## Output Format
 

@@ -104,12 +104,23 @@ struct Config {
 
     private static func loadYAMLConfig() -> [String: Any]? {
         let fm = FileManager.default
-        let localPath = ".transcribe.yaml"
-        let homePath = NSHomeDirectory() + "/.transcribe.yaml"
 
-        let configPath = fm.fileExists(atPath: localPath) ? localPath : homePath
-        guard fm.fileExists(atPath: configPath),
-              let contents = fm.contents(atPath: configPath),
+        // Priority: local > ~/.config/transcribe-summarize/config.yaml > legacy ~/.transcribe.yaml
+        let localPath = ".transcribe.yaml"
+        let xdgConfigPath = NSHomeDirectory() + "/.config/transcribe-summarize/config.yaml"
+        let legacyHomePath = NSHomeDirectory() + "/.transcribe.yaml"
+
+        var configPath: String?
+        if fm.fileExists(atPath: localPath) {
+            configPath = localPath
+        } else if fm.fileExists(atPath: xdgConfigPath) {
+            configPath = xdgConfigPath
+        } else if fm.fileExists(atPath: legacyHomePath) {
+            configPath = legacyHomePath
+        }
+
+        guard let path = configPath,
+              let contents = fm.contents(atPath: path),
               let yaml = String(data: contents, encoding: .utf8) else {
             return nil
         }

@@ -9,6 +9,17 @@ struct TranscribeSummarize: AsyncParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "transcribe-summarize",
         abstract: "Transcribe audio files and generate meeting summaries.",
+        discussion: """
+            Config file: ~/.config/transcribe-summarize/config.yaml
+
+            Example config:
+              model: small
+              llm: ollama
+              confidence: 0.85
+              speakers:
+                - Alice
+                - Bob
+            """,
         version: "0.1.0"
     )
 
