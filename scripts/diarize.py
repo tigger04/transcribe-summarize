@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-# ABOUTME: Speaker diarisation helper using pyannote-audio.
+# ABOUTME: Speaker diarization helper using pyannote-audio.
 # ABOUTME: Outputs JSON with speaker segments for Swift to consume.
 
 """
-Speaker diarisation using pyannote-audio.
+Speaker diarization using pyannote-audio.
 
 Usage: python3 diarize.py <audio_file> [--token <hf_token>]
 
@@ -31,7 +31,7 @@ import sys
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Speaker diarisation with pyannote-audio")
+    parser = argparse.ArgumentParser(description="Speaker diarization with pyannote-audio")
     parser.add_argument("audio_file", help="Path to audio file")
     parser.add_argument("--token", help="HuggingFace token (or set HF_TOKEN env var)")
     args = parser.parse_args()

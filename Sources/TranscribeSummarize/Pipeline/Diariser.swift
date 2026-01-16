@@ -1,4 +1,4 @@
-// ABOUTME: Wrapper for pyannote-audio diarisation via Python subprocess.
+// ABOUTME: Wrapper for pyannote-audio diarization via Python subprocess.
 // ABOUTME: Merges speaker labels with transcript segments.
 
 import Foundation
@@ -6,23 +6,26 @@ import Foundation
 struct Diariser {
     enum DiariseError: Error, LocalizedError {
         case pythonNotFound
+        case venvSetupFailed(String)
         case scriptNotFound
         case noToken
-        case diarisationFailed(String)
+        case diarizationFailed(String)
         case parseError(String)
 
         var errorDescription: String? {
             switch self {
             case .pythonNotFound:
-                return "Python environment not found. Run: make install-venv"
+                return "Python 3 not found. Install with: brew install python@3.10"
+            case .venvSetupFailed(let msg):
+                return "Failed to set up diarization environment: \(msg)"
             case .scriptNotFound:
                 return "Diarisation script not found"
             case .noToken:
                 return "HuggingFace token not configured. Set HF_TOKEN environment variable."
-            case .diarisationFailed(let msg):
+            case .diarizationFailed(let msg):
                 return "Diarisation failed: \(msg)"
             case .parseError(let msg):
-                return "Failed to parse diarisation output: \(msg)"
+                return "Failed to parse diarization output: \(msg)"
             }
         }
     }
@@ -50,7 +53,7 @@ struct Diariser {
             diariseSegments = try await runDiarisation(wavPath: wavPath)
         } catch DiariseError.noToken {
             fputs("Warning: No HuggingFace token configured. Proceeding without speaker labels.\n", stderr)
-            fputs("To enable diarisation, get a token at: https://huggingface.co/settings/tokens\n", stderr)
+            fputs("To enable diarization, get a token at: https://huggingface.co/settings/tokens\n", stderr)
             return segments
         } catch {
             fputs("Warning: Diarisation failed: \(error.localizedDescription)\n", stderr)
@@ -72,16 +75,19 @@ struct Diariser {
     }
 
     private func runDiarisation(wavPath: String) async throws -> [DiariseSegment] {
-        let pythonExec = pythonPath()
-        guard FileManager.default.isExecutableFile(atPath: pythonExec) || commandExists(pythonExec) else {
-            throw DiariseError.pythonNotFound
-        }
-
         let token = ProcessInfo.processInfo.environment["HF_TOKEN"]
             ?? ProcessInfo.processInfo.environment["HUGGINGFACE_TOKEN"]
 
         guard token != nil else {
             throw DiariseError.noToken
+        }
+
+        // Ensure venv exists (creates on first use)
+        try ensureVenvExists()
+
+        let pythonExec = pythonPath()
+        guard FileManager.default.isExecutableFile(atPath: pythonExec) else {
+            throw DiariseError.pythonNotFound
         }
 
         let scriptPath = findDiariseScript()
@@ -90,17 +96,12 @@ struct Diariser {
         }
 
         if verbose > 0 {
-            print("Running speaker diarisation...")
+            print("Running speaker diarization...")
         }
 
         let process = Process()
-        if pythonExec == "/usr/bin/env" {
-            process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
-            process.arguments = ["python3", scriptPath, wavPath]
-        } else {
-            process.executableURL = URL(fileURLWithPath: pythonExec)
-            process.arguments = [scriptPath, wavPath]
-        }
+        process.executableURL = URL(fileURLWithPath: pythonExec)
+        process.arguments = [scriptPath, wavPath]
 
         let stdoutPipe = Pipe()
         let stderrPipe = Pipe()
@@ -114,35 +115,102 @@ struct Diariser {
 
         if let errorResponse = try? JSONDecoder().decode([String: String].self, from: outputData),
            let error = errorResponse["error"] {
-            throw DiariseError.diarisationFailed(error)
+            throw DiariseError.diarizationFailed(error)
         }
 
         guard process.terminationStatus == 0 else {
             let stderrData = stderrPipe.fileHandleForReading.readDataToEndOfFile()
             let stderr = String(data: stderrData, encoding: .utf8) ?? "Unknown error"
-            throw DiariseError.diarisationFailed(stderr)
+            throw DiariseError.diarizationFailed(stderr)
         }
 
         return try JSONDecoder().decode([DiariseSegment].self, from: outputData)
     }
 
+    private func venvPath() -> URL {
+        FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent(".local/share/transcribe-summarize/venv")
+    }
+
+    private func ensureVenvExists() throws {
+        let venv = venvPath()
+        let pythonExec = venv.appendingPathComponent("bin/python3").path
+
+        // Already set up
+        if FileManager.default.isExecutableFile(atPath: pythonExec) {
+            return
+        }
+
+        // Check system python3 exists
+        guard commandExists("python3") else {
+            throw DiariseError.pythonNotFound
+        }
+
+        fputs("Setting up diarization environment (one-time)...\n", stderr)
+
+        // Create parent directory
+        let parentDir = venv.deletingLastPathComponent().path
+        try FileManager.default.createDirectory(
+            atPath: parentDir,
+            withIntermediateDirectories: true,
+            attributes: nil
+        )
+
+        // Create venv
+        let createVenv = Process()
+        createVenv.executableURL = URL(fileURLWithPath: "/usr/bin/env")
+        createVenv.arguments = ["python3", "-m", "venv", venv.path]
+        createVenv.standardOutput = FileHandle.nullDevice
+        createVenv.standardError = FileHandle.standardError
+        try createVenv.run()
+        createVenv.waitUntilExit()
+
+        guard createVenv.terminationStatus == 0 else {
+            throw DiariseError.venvSetupFailed("Failed to create virtual environment")
+        }
+
+        // Install dependencies
+        fputs("Installing pyannote.audio (this may take a few minutes)...\n", stderr)
+
+        let pipPath = venv.appendingPathComponent("bin/pip").path
+        let installDeps = Process()
+        installDeps.executableURL = URL(fileURLWithPath: pipPath)
+        installDeps.arguments = ["install", "--quiet", "pyannote.audio", "torch"]
+        installDeps.standardOutput = FileHandle.nullDevice
+        installDeps.standardError = FileHandle.standardError
+        try installDeps.run()
+        installDeps.waitUntilExit()
+
+        guard installDeps.terminationStatus == 0 else {
+            // Clean up failed venv
+            try? FileManager.default.removeItem(at: venv)
+            throw DiariseError.venvSetupFailed("Failed to install Python dependencies")
+        }
+
+        fputs("Diarisation environment ready.\n", stderr)
+    }
+
     private func pythonPath() -> String {
-        // Prefer managed venv in user's home directory
-        let homeVenv = FileManager.default.homeDirectoryForCurrentUser
-            .appendingPathComponent(".local/share/transcribe-summarize/venv/bin/python3")
-            .path
+        // Use managed venv in user's home directory
+        let homeVenv = venvPath().appendingPathComponent("bin/python3").path
         if FileManager.default.isExecutableFile(atPath: homeVenv) {
             return homeVenv
         }
 
-        // Fallback for Homebrew install location
-        let brewVenv = "/usr/local/share/transcribe-summarize/venv/bin/python3"
+        // Fallback for Homebrew cellar location (legacy)
+        let brewVenv = "/opt/homebrew/share/transcribe-summarize/venv/bin/python3"
         if FileManager.default.isExecutableFile(atPath: brewVenv) {
             return brewVenv
         }
 
-        // Last resort: system python3
-        return "/usr/bin/env"
+        // Intel Mac Homebrew location
+        let brewVenvIntel = "/usr/local/share/transcribe-summarize/venv/bin/python3"
+        if FileManager.default.isExecutableFile(atPath: brewVenvIntel) {
+            return brewVenvIntel
+        }
+
+        // Should not reach here after ensureVenvExists()
+        return venvPath().appendingPathComponent("bin/python3").path
     }
 
     private func findDiariseScript() -> String {

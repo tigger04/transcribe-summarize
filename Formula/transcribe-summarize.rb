@@ -1,5 +1,5 @@
 # ABOUTME: Homebrew formula for transcribe-summarize.
-# ABOUTME: Builds from source, creates managed Python venv for diarisation.
+# ABOUTME: Builds from source. Python venv for diarization created on first use.
 
 class TranscribeSummarize < Formula
   desc "Transcribe audio files and generate meeting summaries"
@@ -11,24 +11,19 @@ class TranscribeSummarize < Formula
   depends_on xcode: ["15.0", :build]
   depends_on "ffmpeg"
   depends_on "whisper-cpp"
-  depends_on "python@3.10" => :build
 
   def install
     system "swift", "build", "-c", "release", "--disable-sandbox"
     bin.install ".build/release/transcribe-summarize"
     (share/"transcribe-summarize").install "scripts/diarize.py"
-
-    # Create managed venv for diarisation
-    venv = share/"transcribe-summarize/venv"
-    system "python3", "-m", "venv", venv
-    system venv/"bin/pip", "install", "--upgrade", "pip"
-    system venv/"bin/pip", "install", "pyannote.audio", "torch"
   end
 
   def caveats
     <<~EOS
-      Speaker diarisation is ready to use. To enable it:
+      Speaker diarization requires a one-time setup on first use.
+      The tool will automatically install Python dependencies when needed.
 
+      To enable diarization:
         1. Create account at https://huggingface.co
         2. Accept model license at https://huggingface.co/pyannote/speaker-diarization-3.1
         3. Generate token at https://huggingface.co/settings/tokens

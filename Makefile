@@ -22,14 +22,15 @@ clean:
 	swift package clean
 	rm -rf .build
 
-install: build install-venv
+install: build
 	install -d /usr/local/bin
 	install -m 755 .build/release/transcribe-summarize /usr/local/bin/
 	install -d /usr/local/share/transcribe-summarize
 	install -m 644 scripts/diarize.py /usr/local/share/transcribe-summarize/
+	@echo "Installed. Diarisation venv will be created on first use."
 
 install-venv:
-	@echo "Setting up Python virtual environment for diarisation..."
+	@echo "Setting up Python virtual environment for diarization..."
 	@mkdir -p $(dir $(VENV_DIR))
 	@python3 -m venv $(VENV_DIR)
 	@$(VENV_DIR)/bin/pip install --upgrade pip --quiet
@@ -48,6 +49,6 @@ help:
 	@echo "  test         - Run all tests"
 	@echo "  test-verbose - Run tests with verbose output"
 	@echo "  clean        - Remove build artifacts"
-	@echo "  install      - Install binary and diarisation venv"
-	@echo "  install-venv - Install diarisation Python environment only"
+	@echo "  install      - Install binary (venv created on first diarization use)"
+	@echo "  install-venv - Pre-install diarization Python environment"
 	@echo "  uninstall    - Remove installed files and venv"

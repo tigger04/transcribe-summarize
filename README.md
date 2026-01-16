@@ -23,6 +23,9 @@ To identify who said what, set a HuggingFace token:
 3. Generate token: https://huggingface.co/settings/tokens
 4. `export HF_TOKEN="your_token"`
 
+On first use with HF_TOKEN set, the tool will automatically set up the Python
+environment for diarization (one-time, ~800MB download).
+
 ### LLM Configuration
 
 For AI-powered summaries, set one of:
@@ -36,7 +39,7 @@ export LLAMA_MODEL_PATH="/path/to/model.gguf"  # Local
 ## Features
 
 - Transcribe audio from any media file (m4a, mp4, wav, mp3, opus, webm)
-- Speaker diarisation (who spoke when)
+- Speaker diarization (who spoke when)
 - LLM-powered meeting summaries with action items
 - Configurable output format with confidence indicators
 - Fast processing on Apple Silicon via whisper.cpp
@@ -57,7 +60,7 @@ cd transcribe-recording
 make install
 ```
 
-This builds the binary and sets up the Python environment for speaker diarisation.
+The Python environment for speaker diarization is created automatically on first use.
 
 ## Usage
 
