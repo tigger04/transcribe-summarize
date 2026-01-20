@@ -1,11 +1,12 @@
 # ABOUTME: Build, test, and install targets for transcribe-summarize.
 # ABOUTME: Use `make build` for release, `make test` to run tests, `make release` to publish.
 
-.PHONY: build test clean install install-venv uninstall release bump-version update-formula help
+.PHONY: build test clean install install-venv uninstall release bump-version update-formula push-tap help
 
 VERSION := $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
 VENV_DIR := $(HOME)/.local/share/transcribe-summarize/venv
 REPO_URL := https://github.com/tigger04/transcribe-recording
+TAP_PATH := /opt/homebrew/Library/Taps/tigger04/homebrew-tap
 
 build:
 	swift build -c release
@@ -55,9 +56,10 @@ help:
 	@echo "  uninstall     - Remove installed files and venv"
 	@echo ""
 	@echo "Release targets:"
-	@echo "  release V=x.y.z  - Full release: bump version, tag, update formula"
+	@echo "  release V=x.y.z  - Full release: bump, tag, update formula, push tap"
 	@echo "  bump-version     - Just update version in main.swift (requires V=x.y.z)"
 	@echo "  update-formula   - Update formula SHA256 for current tag"
+	@echo "  push-tap         - Copy formula to Homebrew tap and push"
 
 # Release management
 # Usage: make release V=0.2.0
@@ -71,11 +73,13 @@ release: _check-version _check-clean test bump-version
 	@echo "Waiting for GitHub to process the tag..."
 	@sleep 5
 	$(MAKE) update-formula
+	git add Formula/transcribe-summarize.rb
+	git commit -m "chore: update formula for v$(V)"
+	git push origin master
+	$(MAKE) push-tap
 	@echo ""
 	@echo "Release v$(V) complete!"
-	@echo "Next steps:"
-	@echo "  1. Update your Homebrew tap with the new formula"
-	@echo "  2. Run: brew upgrade transcribe-summarize"
+	@echo "Run: brew update && brew upgrade transcribe-summarize"
 
 bump-version: _check-version
 	@echo "Bumping version to $(V)..."
@@ -100,6 +104,20 @@ update-formula:
 	sed -i.bak "s|url \".*\"|url \"$$URL\"|" Formula/transcribe-summarize.rb && rm -f Formula/transcribe-summarize.rb.bak; \
 	sed -i.bak "s/sha256 \"[a-f0-9]*\"/sha256 \"$$SHA256\"/" Formula/transcribe-summarize.rb && rm -f Formula/transcribe-summarize.rb.bak; \
 	echo "Formula updated with version $$VERSION"
+
+push-tap:
+	@echo "Pushing formula to Homebrew tap..."
+	@if [ -d "$(TAP_PATH)" ]; then \
+		cp Formula/transcribe-summarize.rb "$(TAP_PATH)/Formula/"; \
+		cd "$(TAP_PATH)" && \
+		git add Formula/transcribe-summarize.rb && \
+		git commit -m "Update transcribe-summarize to $$(grep 'version:' $(CURDIR)/Sources/TranscribeSummarize/main.swift | sed 's/.*"\(.*\)".*/v\1/')" && \
+		git push origin main; \
+		echo "Tap updated successfully"; \
+	else \
+		echo "Warning: Tap not found at $(TAP_PATH)"; \
+		echo "Copy Formula/transcribe-summarize.rb to your tap manually"; \
+	fi
 
 _check-version:
 ifndef V
