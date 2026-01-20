@@ -152,6 +152,9 @@ struct AudioExtractor {
         process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
         process.arguments = [command] + arguments
 
+        // Prevent subprocess from reading terminal input
+        process.standardInput = FileHandle.nullDevice
+
         let pipe = Pipe()
         if captureStderr {
             process.standardError = pipe

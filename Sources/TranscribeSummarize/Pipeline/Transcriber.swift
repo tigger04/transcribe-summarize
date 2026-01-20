@@ -144,6 +144,9 @@ struct Transcriber {
         process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
         process.arguments = [binary] + args
 
+        // Prevent subprocess from reading terminal input
+        process.standardInput = FileHandle.nullDevice
+
         let stderrPipe = Pipe()
         process.standardError = stderrPipe
         process.standardOutput = verbose > 1 ? nil : FileHandle.nullDevice
