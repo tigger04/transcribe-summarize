@@ -154,11 +154,15 @@ Create `~/.config/transcribe-summarize/config.yaml` or `.transcribe.yaml` in you
 
 ```yaml
 model: small
-llm: ollama
+llm: auto
 ollama_model: llama3.1:8b
 anthropic_api_key: sk-ant-...  # Overridden by ANTHROPIC_API_KEY env var
 openai_api_key: sk-...         # Overridden by OPENAI_API_KEY env var
 hf_token: hf_...               # Overridden by HF_TOKEN env var
+# llm_priority:                # Custom auto-selection order (default shown)
+#   - ollama
+#   - claude
+#   - openai
 # speakers:
 #   - Alice
 #   - Bob

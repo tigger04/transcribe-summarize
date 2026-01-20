@@ -51,6 +51,12 @@ enum ConfigStore {
         return nil
     }
 
+    /// Resolve an array value from config file.
+    static func resolveArray(configKey: String) -> [String]? {
+        load()
+        return yamlConfig?[configKey] as? [String]
+    }
+
     private static func loadYAMLConfig() -> [String: Any]? {
         let fm = FileManager.default
 
@@ -225,11 +231,20 @@ struct Config {
 
 /// Selects an LLM provider based on availability and priority order.
 /// Default priority: ollama > claude > openai (local-first, free before paid).
+/// Can be customized via `llm_priority` in config file.
 struct LLMSelector {
+    static let defaultPriority = ["ollama", "claude", "openai"]
     let priority: [String]
 
-    init(priority: [String] = ["ollama", "claude", "openai"]) {
-        self.priority = priority
+    init(priority: [String]? = nil) {
+        // Priority: explicit parameter > config file > default
+        if let explicit = priority {
+            self.priority = explicit
+        } else if let configured = ConfigStore.resolveArray(configKey: "llm_priority") {
+            self.priority = configured
+        } else {
+            self.priority = Self.defaultPriority
+        }
     }
 
     /// Returns the first available provider based on priority order, or nil if none available.

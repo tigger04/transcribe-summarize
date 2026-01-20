@@ -136,14 +136,13 @@ final class ConfigTests: XCTestCase {
         XCTAssertTrue(config.validate())
     }
 
-    func testLLMSelectorPriorityOrder() {
-        // Verify the default priority order is ollama > claude > openai
-        let selector = LLMSelector()
-        XCTAssertEqual(selector.priority, ["ollama", "claude", "openai"])
+    func testLLMSelectorDefaultPriority() {
+        // Verify the default priority constant is ollama > claude > openai
+        XCTAssertEqual(LLMSelector.defaultPriority, ["ollama", "claude", "openai"])
     }
 
     func testLLMSelectorCustomPriority() {
-        // Verify custom priority order is respected
+        // Verify explicit priority order is respected and overrides config
         let selector = LLMSelector(priority: ["openai", "claude"])
         XCTAssertEqual(selector.priority, ["openai", "claude"])
     }
