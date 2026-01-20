@@ -154,25 +154,19 @@ Create `~/.config/transcribe-summarize/config.yaml` or `.transcribe.yaml` in you
 
 ```yaml
 model: small
-confidence: 0.85
-llm: auto  # or: claude, openai, ollama
+llm: ollama
 ollama_model: llama3.1:8b
-speakers:
-  - Alice
-  - Bob
+anthropic_api_key: sk-ant-...  # Overridden by ANTHROPIC_API_KEY env var
+openai_api_key: sk-...         # Overridden by OPENAI_API_KEY env var
+hf_token: hf_...               # Overridden by HF_TOKEN env var
+# speakers:
+#   - Alice
+#   - Bob
 ```
 
 Config priority: local `.transcribe.yaml` > `~/.config/transcribe-summarize/config.yaml` > legacy `~/.transcribe.yaml`
 
-**Security note:** Store API keys in environment variables, not config files:
-
-```bash
-export ANTHROPIC_API_KEY="sk-ant-..."
-export OPENAI_API_KEY="sk-..."
-export HF_TOKEN="hf_..."
-```
-
-Environment variables take precedence over config file for secrets.
+**Security note:** Environment variables take precedence over config file for API keys. Prefer env vars to avoid storing secrets in files.
 
 ## Output Format
 
