@@ -27,7 +27,10 @@ let package = Package(
         ),
         .testTarget(
             name: "TranscribeSummarizeTests",
-            dependencies: ["TranscribeSummarize"]
+            dependencies: ["TranscribeSummarize"],
+            resources: [
+                .copy("Resources/sample.mp3")
+            ]
         ),
     ]
 )

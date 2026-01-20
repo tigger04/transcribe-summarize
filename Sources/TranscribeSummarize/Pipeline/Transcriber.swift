@@ -195,16 +195,15 @@ struct Transcriber {
             throw TranscribeError.parseError("Could not read output file")
         }
 
+        // whisper-cli JSON format (as of v1.8+)
         struct WhisperOutput: Codable {
             struct WhisperSegment: Codable {
-                let t0: Int
-                let t1: Int
-                let text: String
-                let p: Double?
-
-                enum CodingKeys: String, CodingKey {
-                    case t0, t1, text, p
+                struct Offsets: Codable {
+                    let from: Int  // milliseconds
+                    let to: Int    // milliseconds
                 }
+                let offsets: Offsets
+                let text: String
             }
             let transcription: [WhisperSegment]
         }
@@ -213,11 +212,11 @@ struct Transcriber {
 
         return output.transcription.map { seg in
             Segment(
-                start: Double(seg.t0) / 100.0,
-                end: Double(seg.t1) / 100.0,
+                start: Double(seg.offsets.from) / 1000.0,
+                end: Double(seg.offsets.to) / 1000.0,
                 text: seg.text.trimmingCharacters(in: .whitespaces),
                 speaker: nil,
-                confidence: seg.p ?? 1.0
+                confidence: 1.0  // whisper-cli no longer provides per-segment confidence
             )
         }
     }
