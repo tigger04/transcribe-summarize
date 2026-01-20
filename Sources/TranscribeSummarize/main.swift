@@ -28,7 +28,7 @@ struct TranscribeSummarize: AsyncParsableCommand {
             Security: Env vars (ANTHROPIC_API_KEY, OPENAI_API_KEY, HF_TOKEN)
             take precedence over config file for secrets.
             """,
-        version: "0.2.16"
+        version: "0.2.17"
     )
 
     @Argument(help: "Path to the audio/video file to transcribe.")
