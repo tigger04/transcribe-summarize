@@ -15,12 +15,16 @@ struct TranscribeSummarize: AsyncParsableCommand {
             Example config:
               model: small
               llm: ollama
-              ollama_model: mistral
+              ollama_model: llama3.1:8b
               anthropic_api_key: sk-ant-...
               hf_token: hf_...
               speakers:
                 - Alice
                 - Bob
+
+            LLM auto-selection (--llm auto):
+              Priority: ollama > claude > openai (local-first, free before paid)
+              Selects first provider with credentials configured.
             """,
         version: "0.1.0"
     )
@@ -43,8 +47,8 @@ struct TranscribeSummarize: AsyncParsableCommand {
     @Option(name: [.short, .long], help: "Whisper model size (tiny, base, small, medium, large)")
     var model: String = "base"
 
-    @Option(name: .long, help: "LLM provider: claude, openai, ollama (default: claude)")
-    var llm: String = "claude"
+    @Option(name: .long, help: "LLM provider: claude, openai, ollama, auto (default: auto)")
+    var llm: String = "auto"
 
     @Flag(name: [.short, .long], help: "Increase logging verbosity")
     var verbose: Int
@@ -83,7 +87,16 @@ struct TranscribeSummarize: AsyncParsableCommand {
         print("Configuration:")
         print("  Output: \(config.outputPath)")
         print("  Whisper model: \(config.model.rawValue)")
-        print("  LLM provider: \(config.llm)")
+        if config.llm == "auto" {
+            let selector = LLMSelector()
+            if let selected = selector.selectProvider() {
+                print("  LLM provider: auto -> \(selected)")
+            } else {
+                print("  LLM provider: auto (no provider available)")
+            }
+        } else {
+            print("  LLM provider: \(config.llm)")
+        }
         print("  Confidence threshold: \(Int(config.confidence * 100))%")
         print("  Timestamps: \(config.timestamps)")
         print()
@@ -149,8 +162,25 @@ struct TranscribeSummarize: AsyncParsableCommand {
             return "[\(seg.startTimestamp)] \(speaker): \(seg.text)"
         }.joined(separator: "\n")
 
-        guard let providerType = LLMProviderType(rawValue: config.llm) else {
-            fputs("Error: Invalid LLM provider: \(config.llm)\n", stderr)
+        // Resolve LLM provider (handle "auto" selection)
+        let resolvedLLM: String
+        if config.llm == "auto" {
+            let selector = LLMSelector()
+            guard let selected = selector.selectProvider() else {
+                fputs("Error: No LLM provider available. Configure one of:\n", stderr)
+                fputs("  - OLLAMA_MODEL (e.g., llama3.1:8b) for local Ollama\n", stderr)
+                fputs("  - ANTHROPIC_API_KEY for Claude\n", stderr)
+                fputs("  - OPENAI_API_KEY for OpenAI\n", stderr)
+                throw ExitCode.failure
+            }
+            resolvedLLM = selected
+            if config.verbose > 0 { print("Auto-selected LLM provider: \(resolvedLLM)") }
+        } else {
+            resolvedLLM = config.llm
+        }
+
+        guard let providerType = LLMProviderType(rawValue: resolvedLLM) else {
+            fputs("Error: Invalid LLM provider: \(resolvedLLM)\n", stderr)
             throw ExitCode.failure
         }
 

@@ -20,22 +20,26 @@ class TranscribeSummarize < Formula
   end
 
   def post_install
-    # Pull mistral model so it works out of the box
-    system "ollama", "pull", "mistral"
+    # Pull llama3.1:8b model so it works out of the box
+    system "ollama", "pull", "llama3.1:8b"
   end
 
   def caveats
     <<~EOS
-      Ollama and the mistral model have been installed.
+      Ollama and the llama3.1:8b model have been installed.
 
       To use local LLM summarization (no API key needed):
         brew services start ollama
-        export OLLAMA_MODEL="mistral"
-        transcribe-summarize --llm ollama meeting.m4a
+        export OLLAMA_MODEL="llama3.1:8b"
+        transcribe-summarize meeting.m4a
 
       Or use cloud LLM providers:
-        export ANTHROPIC_API_KEY="your_key"  # Claude (default)
+        export ANTHROPIC_API_KEY="your_key"  # Claude
         export OPENAI_API_KEY="your_key"     # OpenAI
+
+      LLM auto-selection (default):
+        Priority: ollama > claude > openai
+        Set credentials for any provider above; the first available is used.
 
       For speaker diarization (optional):
         1. Create account at https://huggingface.co

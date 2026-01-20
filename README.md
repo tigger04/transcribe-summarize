@@ -28,19 +28,45 @@ environment for diarization (one-time, ~800MB download).
 
 ### LLM Configuration
 
-Ollama and the mistral model are installed automatically. For local summarization (no API key needed):
+By default, transcribe-summarize uses **auto-selection** to choose an LLM provider based on what's configured:
+
+**Priority order:** ollama > claude > openai (local-first, free before paid)
+
+Ollama and llama3.1:8b are installed automatically with Homebrew. For local summarization (no API key needed):
 
 ```bash
 brew services start ollama
-export OLLAMA_MODEL="mistral"
-transcribe-summarize --llm ollama meeting.m4a
+export OLLAMA_MODEL="llama3.1:8b"
+transcribe-summarize meeting.m4a
 ```
 
 Or use cloud providers:
 
 ```bash
-export ANTHROPIC_API_KEY="sk-ant-..."  # Claude (default)
+export ANTHROPIC_API_KEY="sk-ant-..."  # Claude
 export OPENAI_API_KEY="sk-..."         # OpenAI
+```
+
+To explicitly choose a provider:
+
+```bash
+transcribe-summarize --llm claude meeting.m4a   # Force Claude
+transcribe-summarize --llm ollama meeting.m4a   # Force Ollama
+```
+
+#### Alternative Local Models
+
+For resource-constrained systems, lighter models are available:
+
+| Model | Parameters | RAM | Best For |
+|-------|-----------|-----|----------|
+| `llama3.1:8b` | 8B | 8GB | High-quality summaries (default) |
+| `llama3.2:3b` | 3B | 4-6GB | Resource-constrained systems |
+| `phi3:mini` | 3.8B | 4GB | Analytical/reasoning tasks |
+
+```bash
+ollama pull llama3.2:3b
+export OLLAMA_MODEL="llama3.2:3b"
 ```
 
 ## Features
@@ -51,13 +77,13 @@ export OPENAI_API_KEY="sk-..."         # OpenAI
 - Configurable output format with confidence indicators
 - Fast processing on Apple Silicon via whisper.cpp
 
-## Installation from Source
+## Installation from Source (macOS)
 
 ### Prerequisites
 
 ```bash
 brew install ffmpeg whisper-cpp ollama
-ollama pull mistral
+ollama pull llama3.1:8b
 ```
 
 ### Build and Install
@@ -69,6 +95,32 @@ make install
 ```
 
 The Python environment for speaker diarization is created automatically on first use.
+
+## Linux Installation
+
+### Dependencies
+
+```bash
+# Ubuntu/Debian
+sudo apt install ffmpeg python3 python3-pip swift
+
+# Install whisper.cpp from source
+git clone https://github.com/ggerganov/whisper.cpp
+cd whisper.cpp && make && sudo cp main /usr/local/bin/whisper-cpp
+
+# Install Ollama
+curl -fsSL https://ollama.com/install.sh | sh
+ollama pull llama3.1:8b
+```
+
+### Build from Source
+
+```bash
+git clone https://github.com/tigger04/transcribe-recording.git
+cd transcribe-recording
+swift build -c release
+sudo cp .build/release/transcribe-summarize /usr/local/bin/
+```
 
 ## Usage
 
@@ -92,7 +144,7 @@ transcribe-summarize meeting.m4a --dry-run
 | `-t, --timestamps` | Include timestamps | `true` |
 | `-c, --confidence` | Minimum confidence threshold | `0.8` |
 | `-m, --model` | Whisper model (tiny/base/small/medium/large) | `base` |
-| `--llm` | LLM provider (claude/openai/ollama) | `claude` |
+| `--llm` | LLM provider (claude/openai/ollama/auto) | `auto` |
 | `-v` | Verbosity (-v, -vv, -vvv) | quiet |
 | `--dry-run` | Show what would be done | - |
 
@@ -103,13 +155,13 @@ Create `~/.config/transcribe-summarize/config.yaml` or `.transcribe.yaml` in you
 ```yaml
 model: small
 confidence: 0.85
-llm: ollama
+llm: auto  # or: claude, openai, ollama
 speakers:
   - Alice
   - Bob
 
 # API keys (optional, can also use environment variables)
-ollama_model: mistral
+ollama_model: llama3.1:8b
 anthropic_api_key: sk-ant-...
 openai_api_key: sk-...
 hf_token: hf_...
@@ -158,6 +210,23 @@ make test
 # Clean
 make clean
 ```
+
+### Releasing
+
+To publish a new version:
+
+```bash
+make release V=x.y.z
+```
+
+This will:
+1. Run all tests
+2. Update the version in `main.swift`
+3. Commit and tag the release
+4. Push to GitHub
+5. Update the Homebrew formula with the new SHA256
+
+After release, update your Homebrew tap with the new formula.
 
 ## License
 

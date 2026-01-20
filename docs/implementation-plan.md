@@ -160,6 +160,19 @@ pyannote-audio requires Python. Options:
 6. Compiled defaults
 ```
 
+### LLM Provider Auto-Selection
+
+When `--llm auto` (the default), the tool automatically selects an LLM provider based on availability:
+
+**Priority order:** ollama > claude > openai (local-first, free before paid)
+
+A provider is "available" if its credentials are configured:
+- **ollama:** `OLLAMA_MODEL` env var or `ollama_model` in config
+- **claude:** `ANTHROPIC_API_KEY` env var or `anthropic_api_key` in config
+- **openai:** `OPENAI_API_KEY` env var or `openai_api_key` in config
+
+The `LLMSelector` struct in `Config.swift` handles this logic.
+
 ## Files to Create
 
 1. `Package.swift` - Swift package manifest
@@ -189,4 +202,15 @@ pyannote-audio requires Python. Options:
 
 - pyannote-audio setup can be finicky (Python venv, CUDA/MPS)
 - Whisper model download requires ~150MB+ network transfer
-- Claude and OpenAI API costs scale with transcript length - warn user for longer transcripts, suggest local mistral model as free alternative
+- Claude and OpenAI API costs scale with transcript length - warn user for longer transcripts, suggest local llama3.1:8b model as free alternative
+
+## Release Process
+
+Use `make release V=x.y.z` to:
+1. Run all tests
+2. Update version in `main.swift`
+3. Commit and tag
+4. Push to GitHub
+5. Update formula with new SHA256
+
+The formula must then be copied to the Homebrew tap repository.

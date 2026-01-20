@@ -110,11 +110,11 @@ struct Config {
             ?? ProcessInfo.processInfo.environment["TRANSCRIBE_MODEL"].flatMap { WhisperModel(rawValue: $0) }
             ?? .base
 
-        // Resolve LLM: CLI > YAML > env > default
-        let resolvedLLM = llm != "claude" ? llm
+        // Resolve LLM: CLI > YAML > env > default (auto)
+        let resolvedLLM = llm != "auto" ? llm
             : (yamlConfig?["llm"] as? String)
             ?? ProcessInfo.processInfo.environment["TRANSCRIBE_LLM"]
-            ?? "claude"
+            ?? "auto"
 
         return Config(
             inputFile: inputFile,
@@ -153,7 +153,7 @@ struct Config {
             return false
         }
 
-        let validLLMs = ["claude", "openai", "ollama"]
+        let validLLMs = ["claude", "openai", "ollama", "auto"]
         guard validLLMs.contains(llm) else {
             fputs("Error: Invalid LLM provider: \(llm)\n", stderr)
             fputs("Valid providers: \(validLLMs.joined(separator: ", "))\n", stderr)
@@ -208,5 +208,39 @@ struct Config {
 
         // Otherwise, treat as comma-separated list
         return input.components(separatedBy: ",").map { $0.trimmingCharacters(in: .whitespaces) }
+    }
+}
+
+/// Selects an LLM provider based on availability and priority order.
+/// Default priority: ollama > claude > openai (local-first, free before paid).
+struct LLMSelector {
+    let priority: [String]
+
+    init(priority: [String] = ["ollama", "claude", "openai"]) {
+        self.priority = priority
+    }
+
+    /// Returns the first available provider based on priority order, or nil if none available.
+    func selectProvider() -> String? {
+        for provider in priority {
+            if isAvailable(provider) {
+                return provider
+            }
+        }
+        return nil
+    }
+
+    /// Checks if a provider has required credentials configured.
+    func isAvailable(_ provider: String) -> Bool {
+        switch provider {
+        case "ollama":
+            return ConfigStore.resolve(configKey: "ollama_model", envKey: "OLLAMA_MODEL") != nil
+        case "claude":
+            return ConfigStore.resolve(configKey: "anthropic_api_key", envKey: "ANTHROPIC_API_KEY") != nil
+        case "openai":
+            return ConfigStore.resolve(configKey: "openai_api_key", envKey: "OPENAI_API_KEY") != nil
+        default:
+            return false
+        }
     }
 }
