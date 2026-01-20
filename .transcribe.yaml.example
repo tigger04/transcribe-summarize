@@ -1,5 +1,5 @@
 # transcribe-summarize configuration
-# Place in ~/.transcribe.yaml or ./.transcribe.yaml (local takes precedence)
+# Place in ~/.config/transcribe-summarize/config.yaml or ./.transcribe.yaml (local takes precedence)
 
 # Whisper model: tiny, base, small, medium, large
 model: base
@@ -10,13 +10,35 @@ confidence: 0.8
 # Include timestamps in transcript output
 timestamps: true
 
-# LLM provider: claude, openai, ollama
-llm: claude
+# Audio preprocessing: auto, none, analyze
+preprocess: auto
 
-# For Ollama, also set OLLAMA_MODEL env var (e.g., mistral, llama3)
-# llm: ollama
+# ----- LLM Configuration -----
+# LLM provider: claude, openai, ollama, auto
+# auto = ollama > claude > openai (local-first)
+llm: auto
 
-# Speaker names (optional, for diarization)
+# For Ollama local models (no API key needed):
+# ollama_model: llama3.1:8b
+
+# For cloud providers (optional, for higher quality):
+# anthropic_api_key: sk-ant-...   # Claude (overridden by ANTHROPIC_API_KEY env var)
+# openai_api_key: sk-...          # OpenAI (overridden by OPENAI_API_KEY env var)
+
+# Custom LLM priority order (default: ollama, claude, openai)
+# llm_priority:
+#   - ollama
+#   - claude
+#   - openai
+
+# ----- Speaker Diarization -----
+# Diarization works out-of-the-box using speechbrain (no setup required).
+# For higher quality, set up HuggingFace token for pyannote backend.
+
+# HuggingFace token for pyannote (overridden by HF_TOKEN env var)
+# hf_token: hf_...
+
+# Speaker names (optional - assigned in order of first appearance)
 # speakers:
 #   - Alice
 #   - Bob

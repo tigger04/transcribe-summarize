@@ -1,4 +1,5 @@
-// ABOUTME: Wrapper for pyannote-audio diarization via Python subprocess.
+// ABOUTME: Wrapper for speaker diarization via Python subprocess.
+// ABOUTME: Supports pyannote (with HF_TOKEN) and speechbrain (no token needed) backends.
 // ABOUTME: Merges speaker labels with transcript segments.
 
 import Foundation
@@ -8,7 +9,6 @@ struct Diarizer {
         case pythonNotFound
         case venvSetupFailed(String)
         case scriptNotFound
-        case noToken
         case diarizationFailed(String)
         case parseError(String)
 
@@ -20,8 +20,6 @@ struct Diarizer {
                 return "Failed to set up diarization environment: \(msg)"
             case .scriptNotFound:
                 return "Diarization script not found"
-            case .noToken:
-                return "HuggingFace token not configured. Set HF_TOKEN environment variable."
             case .diarizationFailed(let msg):
                 return "Diarization failed: \(msg)"
             case .parseError(let msg):
@@ -46,15 +44,12 @@ struct Diarizer {
 
     /// Apply speaker labels to transcript segments.
     /// Returns segments with speaker field populated.
+    /// Uses pyannote backend if HF_TOKEN is set, otherwise falls back to speechbrain.
     func diarize(wavPath: String, segments: [Segment]) async throws -> [Segment] {
         let diarizeSegments: [DiarizeSegment]
 
         do {
             diarizeSegments = try await runDiarization(wavPath: wavPath)
-        } catch DiarizeError.noToken {
-            fputs("Warning: No HuggingFace token configured. Proceeding without speaker labels.\n", stderr)
-            fputs("To enable diarization, get a token at: https://huggingface.co/settings/tokens\n", stderr)
-            return segments
         } catch {
             fputs("Warning: Diarization failed: \(error.localizedDescription)\n", stderr)
             fputs("Proceeding without speaker labels.\n", stderr)
@@ -75,12 +70,6 @@ struct Diarizer {
     }
 
     private func runDiarization(wavPath: String) async throws -> [DiarizeSegment] {
-        let token = ConfigStore.resolve(configKey: "hf_token", envKeys: ["HF_TOKEN", "HUGGINGFACE_TOKEN"])
-
-        guard token != nil else {
-            throw DiarizeError.noToken
-        }
-
         // Ensure venv exists (creates on first use)
         try ensureVenvExists()
 
@@ -94,8 +83,11 @@ struct Diarizer {
             throw DiarizeError.scriptNotFound
         }
 
+        let token = ConfigStore.resolve(configKey: "hf_token", envKeys: ["HF_TOKEN", "HUGGINGFACE_TOKEN"])
+        let backend = token != nil ? "pyannote" : "speechbrain"
+
         if verbose > 0 {
-            print("Running speaker diarization...")
+            print("Running speaker diarization (backend: \(backend))...")
         }
 
         let process = Process()
@@ -173,13 +165,15 @@ struct Diarizer {
             throw DiarizeError.venvSetupFailed("Failed to create virtual environment")
         }
 
-        // Install dependencies
-        fputs("Installing pyannote.audio (this may take a few minutes)...\n", stderr)
+        // Install dependencies for both pyannote and speechbrain backends
+        fputs("Installing diarization dependencies (this may take a few minutes)...\n", stderr)
 
         let pipPath = venv.appendingPathComponent("bin/pip").path
         let installDeps = Process()
         installDeps.executableURL = URL(fileURLWithPath: pipPath)
-        installDeps.arguments = ["install", "--quiet", "pyannote.audio", "torch"]
+        // pyannote.audio for HF_TOKEN users, speechbrain for fallback
+        // scikit-learn needed for clustering in speechbrain backend
+        installDeps.arguments = ["install", "--quiet", "pyannote.audio", "speechbrain", "scikit-learn", "torch", "torchaudio"]
         installDeps.standardOutput = FileHandle.nullDevice
         installDeps.standardError = FileHandle.standardError
         try installDeps.run()

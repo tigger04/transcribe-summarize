@@ -16,9 +16,22 @@ Basic usage:
 transcribe-summarize meeting.m4a
 ```
 
-### Optional: Speaker Diarization
+**Works out of the box** — transcription, speaker diarization, and summarization all work without any API keys or account setup using local models (Ollama + speechbrain). Start here, then optionally add API keys for higher quality.
 
-To identify who said what, set a HuggingFace token:
+### Improving Quality (Optional)
+
+For better results, you can configure:
+
+| Feature | Default (free, local) | Optional upgrade |
+|---------|----------------------|------------------|
+| **Summarization** | Ollama (llama3.1:8b) | Claude or OpenAI API |
+| **Speaker diarization** | speechbrain (~15-20% error) | pyannote (~10-15% error) with HF_TOKEN |
+
+### Speaker Diarization
+
+Speaker identification works automatically using speechbrain (Apache 2.0 license, no account needed).
+
+For slightly better accuracy, you can optionally use pyannote:
 
 1. Create account: https://huggingface.co
 2. Accept **all three** model licenses (click "Agree and access repository" on each):
@@ -28,10 +41,7 @@ To identify who said what, set a HuggingFace token:
 3. Generate token: https://huggingface.co/settings/tokens
 4. `export HF_TOKEN="your_token"`
 
-On first use with HF_TOKEN set, the tool will automatically set up the Python
-environment for diarization (one-time, ~800MB download).
-
-> **TODO:** We're investigating [speechbrain](https://speechbrain.github.io/) as an alternative diarization engine with a permissive Apache 2.0 license. This would eliminate the need for HuggingFace account setup. See [#20](https://github.com/tigger04/transcribe-recording/issues/20) for progress.
+On first use, the tool automatically sets up the Python environment for diarization (one-time, ~1GB download).
 
 ### LLM Configuration
 
