@@ -5,7 +5,7 @@ Turn meeting recordings into structured documents with transcripts, speaker labe
 **What it does:** You give it an audio file from a meeting, interview, or conversation. It gives you back a readable document with:
 - A summary of key points and action items
 - A full transcript with timestamps
-- Speaker labels ("Alice said this, Bob said that")
+- Speaker attribution (identifying who said what)
 
 **How it works:** Everything runs locally on your Mac - your audio never leaves your computer.* The tool uses AI to transcribe speech (via whisper.cpp), identify different speakers (via speechbrain), and summarize the conversation (via Ollama).
 
