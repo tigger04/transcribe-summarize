@@ -44,7 +44,7 @@ Single markdown file with the following structure:
 - Questions raised but not resolved
 
 ### Themes and Tone
-[Brief characterisation of the meeting's nature]
+[Brief characterization of the meeting's nature]
 
 ### Actions
 | Action | Assigned To | Due Date (if stated) |
@@ -93,7 +93,7 @@ Priority order (highest to lowest):
 - Transcription: whisper.cpp (preferred for Apple Silicon) or openai-whisper
 - Diarization: pyannote-audio or equivalent
 - Audio processing: ffmpeg
-- LLM for summarisation: Claude API or local model
+- LLM for summarization: Claude API or local model
 
 ## Roadmap (not for v1)
 
