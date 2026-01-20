@@ -9,8 +9,8 @@ struct ClaudeProvider: LLMProvider {
     private let model = "claude-3-5-sonnet-20241022"
 
     init(verbose: Int = 0) throws {
-        guard let key = ConfigStore.resolve(configKey: "anthropic_api_key", envKey: "ANTHROPIC_API_KEY") else {
-            throw LLMError.missingAPIKey("ANTHROPIC_API_KEY not set (config or env)")
+        guard let key = ConfigStore.resolveSecret(configKey: "anthropic_api_key", envKey: "ANTHROPIC_API_KEY") else {
+            throw LLMError.missingAPIKey("ANTHROPIC_API_KEY not set (env or config)")
         }
         self.apiKey = key
         self.verbose = verbose

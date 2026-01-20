@@ -9,8 +9,8 @@ struct OpenAIProvider: LLMProvider {
     private let model = "gpt-4o"
 
     init(verbose: Int = 0) throws {
-        guard let key = ConfigStore.resolve(configKey: "openai_api_key", envKey: "OPENAI_API_KEY") else {
-            throw LLMError.missingAPIKey("OPENAI_API_KEY not set (config or env)")
+        guard let key = ConfigStore.resolveSecret(configKey: "openai_api_key", envKey: "OPENAI_API_KEY") else {
+            throw LLMError.missingAPIKey("OPENAI_API_KEY not set (env or config)")
         }
         self.apiKey = key
         self.verbose = verbose

@@ -46,8 +46,8 @@ struct TranscribeSummarize: AsyncParsableCommand {
     @Option(name: [.short, .long], help: "Minimum confidence threshold (0.0-1.0, default: 0.8)")
     var confidence: Double = 0.8
 
-    @Option(name: [.short, .long], help: "Whisper model size (tiny, base, small, medium, large)")
-    var model: String = "base"
+    @Option(name: [.short, .long], help: "Whisper model size (tiny, base, small, medium, large, default: base)")
+    var model: String?
 
     @Option(name: .long, help: "LLM provider: claude, openai, ollama, auto (default: auto)")
     var llm: String = "auto"
@@ -65,7 +65,7 @@ struct TranscribeSummarize: AsyncParsableCommand {
             speakers: speakers,
             timestamps: timestamps,
             confidence: confidence,
-            model: model,
+            model: model ?? "",
             llm: llm,
             verbose: verbose,
             dryRun: dryRun
