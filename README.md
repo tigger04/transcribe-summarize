@@ -151,6 +151,13 @@ hf_token: hf_...               # Overridden by HF_TOKEN env var
 
 Config priority: local `.transcribe.yaml` > `~/.config/transcribe-summarize/config.yaml` > legacy `~/.transcribe.yaml`
 
+**How speaker naming works:** Names are assigned in order of first appearance in the audio. The first person to speak gets the first name, second speaker gets the second name, etc.
+
+Tips for correct speaker assignment:
+1. Listen to the first few seconds to know who speaks first
+2. Or run once without names, check the transcript to identify speakers, then re-run with correctly ordered names
+3. Or just edit the markdown output to swap names if needed
+
 **Security note:** Environment variables take precedence over config file for API keys. Prefer env vars to avoid storing secrets in files.
 
 ## Output Format
