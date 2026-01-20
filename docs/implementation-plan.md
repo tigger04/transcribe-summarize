@@ -94,7 +94,7 @@ transcribe-summarize
 
 **Deliverable:** Transcript with speaker labels
 
-### Phase 5: LLM Summarisation
+### Phase 5: LLM Summarization
 
 1. LLMProvider protocol
 2. ClaudeProvider (Anthropic API)
