@@ -5,7 +5,8 @@ import Foundation
 import Yams
 
 /// Shared access to YAML config for token resolution.
-/// Tokens can be set in config file or environment variables; config takes precedence.
+/// For secrets (API keys), environment variables take precedence over config file.
+/// For other settings, config file takes precedence over environment variables.
 enum ConfigStore {
     private static var yamlConfig: [String: Any]?
     private static var isLoaded = false
@@ -17,12 +18,23 @@ enum ConfigStore {
     }
 
     /// Resolve a value from config file first, then environment variable.
+    /// Use for non-sensitive settings.
     static func resolve(configKey: String, envKey: String) -> String? {
         load()
         if let value = yamlConfig?[configKey] as? String, !value.isEmpty {
             return value
         }
         return ProcessInfo.processInfo.environment[envKey]
+    }
+
+    /// Resolve a secret from environment variable first, then config file.
+    /// Environment variables are preferred for secrets to avoid storing them in files.
+    static func resolveSecret(configKey: String, envKey: String) -> String? {
+        load()
+        if let value = ProcessInfo.processInfo.environment[envKey], !value.isEmpty {
+            return value
+        }
+        return yamlConfig?[configKey] as? String
     }
 
     /// Resolve with multiple possible environment variable names.
@@ -231,14 +243,16 @@ struct LLMSelector {
     }
 
     /// Checks if a provider has required credentials configured.
+    /// Uses resolveSecret for API keys (env vars take precedence for security).
     func isAvailable(_ provider: String) -> Bool {
         switch provider {
         case "ollama":
+            // ollama_model is not a secret, use normal resolve
             return ConfigStore.resolve(configKey: "ollama_model", envKey: "OLLAMA_MODEL") != nil
         case "claude":
-            return ConfigStore.resolve(configKey: "anthropic_api_key", envKey: "ANTHROPIC_API_KEY") != nil
+            return ConfigStore.resolveSecret(configKey: "anthropic_api_key", envKey: "ANTHROPIC_API_KEY") != nil
         case "openai":
-            return ConfigStore.resolve(configKey: "openai_api_key", envKey: "OPENAI_API_KEY") != nil
+            return ConfigStore.resolveSecret(configKey: "openai_api_key", envKey: "OPENAI_API_KEY") != nil
         default:
             return false
         }

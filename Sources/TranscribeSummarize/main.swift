@@ -16,8 +16,6 @@ struct TranscribeSummarize: AsyncParsableCommand {
               model: small
               llm: ollama
               ollama_model: llama3.1:8b
-              anthropic_api_key: sk-ant-...
-              hf_token: hf_...
               speakers:
                 - Alice
                 - Bob
@@ -25,6 +23,9 @@ struct TranscribeSummarize: AsyncParsableCommand {
             LLM auto-selection (--llm auto):
               Priority: ollama > claude > openai (local-first, free before paid)
               Selects first provider with credentials configured.
+
+            Security: Set API keys via environment variables (ANTHROPIC_API_KEY,
+            OPENAI_API_KEY, HF_TOKEN), not config files. Env vars take precedence.
             """,
         version: "0.2.0"
     )
