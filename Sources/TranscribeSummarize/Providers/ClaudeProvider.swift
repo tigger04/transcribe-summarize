@@ -1,12 +1,12 @@
 // ABOUTME: Anthropic Claude API integration for summarisation.
-// ABOUTME: Uses claude-3-5-sonnet for cost-effective quality.
+// ABOUTME: Uses Claude Sonnet 4 for cost-effective quality.
 
 import Foundation
 
 struct ClaudeProvider: LLMProvider {
     private let apiKey: String
     private let verbose: Int
-    private let model = "claude-3-5-sonnet-20241022"
+    private let model = "claude-sonnet-4-20250514"
 
     init(verbose: Int = 0) throws {
         guard let key = ConfigStore.resolveSecret(configKey: "anthropic_api_key", envKey: "ANTHROPIC_API_KEY") else {
