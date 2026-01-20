@@ -88,9 +88,7 @@ struct Diarizer {
         let token = ConfigStore.resolve(configKey: "hf_token", envKeys: ["HF_TOKEN", "HUGGINGFACE_TOKEN"])
         let backend = token != nil ? "pyannote" : "speechbrain"
 
-        if verbose > 0 {
-            print("Running speaker diarization (backend: \(backend), device: \(device))...")
-        }
+        print("  Using \(backend) backend on \(device)")
 
         let process = Process()
         process.executableURL = URL(fileURLWithPath: pythonExec)
@@ -102,9 +100,9 @@ struct Diarizer {
         process.environment = env
 
         let stdoutPipe = Pipe()
-        let stderrPipe = Pipe()
         process.standardOutput = stdoutPipe
-        process.standardError = stderrPipe
+        // Stream stderr directly to terminal for progress output
+        process.standardError = FileHandle.standardError
 
         try process.run()
         process.waitUntilExit()
@@ -117,9 +115,7 @@ struct Diarizer {
         }
 
         guard process.terminationStatus == 0 else {
-            let stderrData = stderrPipe.fileHandleForReading.readDataToEndOfFile()
-            let stderr = String(data: stderrData, encoding: .utf8) ?? "Unknown error"
-            throw DiarizeError.diarizationFailed(stderr)
+            throw DiarizeError.diarizationFailed("Process exited with status \(process.terminationStatus)")
         }
 
         return try JSONDecoder().decode([DiarizeSegment].self, from: outputData)

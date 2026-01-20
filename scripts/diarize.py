@@ -122,6 +122,7 @@ def diarize_pyannote(audio_file, token, device):
     except ImportError:
         return {"error": "pyannote.audio not installed", "help": "Run: pip install pyannote.audio"}
 
+    print("  Loading pyannote model...", file=sys.stderr, flush=True)
     pipeline = Pipeline.from_pretrained(
         "pyannote/speaker-diarization-3.1",
         token=token
@@ -130,6 +131,7 @@ def diarize_pyannote(audio_file, token, device):
     # Move pipeline to specified device for GPU acceleration
     pipeline.to(device)
 
+    print("  Running diarization...", file=sys.stderr, flush=True)
     result = pipeline(audio_file)
 
     # pyannote.audio 4.x returns DiarizeOutput, need to access .speaker_diarization
@@ -168,6 +170,7 @@ def diarize_speechbrain(audio_file, device, num_speakers=None):
     from speechbrain.lobes.features import Fbank
 
     # Download and load the ECAPA-TDNN model directly (avoids custom.py issue)
+    print("  Loading speechbrain model...", file=sys.stderr, flush=True)
     embedding_path = hf_hub_download('speechbrain/spkrec-ecapa-voxceleb', 'embedding_model.ckpt')
 
     model = ECAPA_TDNN(
@@ -214,6 +217,10 @@ def diarize_speechbrain(audio_file, device, num_speakers=None):
     embeddings = []
     timestamps = []
 
+    # Calculate total windows for progress reporting
+    total_windows = max(1, (total_samples - window_samples) // hop_samples + 1)
+    window_count = 0
+
     for start_sample in range(0, total_samples - window_samples + 1, hop_samples):
         end_sample = start_sample + window_samples
         segment = waveform[:, start_sample:end_sample]
@@ -232,8 +239,16 @@ def diarize_speechbrain(audio_file, device, num_speakers=None):
         end_time = end_sample / sample_rate
         timestamps.append((start_time, end_time))
 
+        # Progress output to stderr
+        window_count += 1
+        progress_pct = int(100 * window_count / total_windows)
+        print(f"\r  Extracting embeddings: {progress_pct}%", end="", file=sys.stderr, flush=True)
+
     if not embeddings:
         return []
+
+    # Clear progress line
+    print("", file=sys.stderr)
 
     embeddings = np.array(embeddings)
 
@@ -243,6 +258,7 @@ def diarize_speechbrain(audio_file, device, num_speakers=None):
         # Default to 2 if estimation fails
         num_speakers = estimate_num_speakers(embeddings, max_speakers=8)
 
+    print("  Clustering speakers...", file=sys.stderr, flush=True)
     # Cluster embeddings
     if num_speakers == 1:
         labels = np.zeros(len(embeddings), dtype=int)

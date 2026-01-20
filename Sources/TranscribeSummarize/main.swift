@@ -28,7 +28,7 @@ struct TranscribeSummarize: AsyncParsableCommand {
             Security: Env vars (ANTHROPIC_API_KEY, OPENAI_API_KEY, HF_TOKEN)
             take precedence over config file for secrets.
             """,
-        version: "0.2.14"
+        version: "0.2.15"
     )
 
     @Argument(help: "Path to the audio/video file to transcribe.")
@@ -151,12 +151,10 @@ struct TranscribeSummarize: AsyncParsableCommand {
         }
 
         // Step 1: Extract audio (with optional preprocessing)
-        if config.verbose > 0 {
-            if config.preprocess == .auto {
-                print("Extracting and preprocessing audio...")
-            } else {
-                print("Extracting audio...")
-            }
+        if config.preprocess == .auto {
+            print("Extracting and preprocessing audio...")
+        } else {
+            print("Extracting audio...")
         }
         let extractor = AudioExtractor(verbose: config.verbose)
         let (wavPath, audioInfo, _) = try await extractor.extract(
@@ -170,7 +168,7 @@ struct TranscribeSummarize: AsyncParsableCommand {
         }
 
         // Step 2: Transcribe
-        if config.verbose > 0 { print("Transcribing...") }
+        print("Transcribing...")
         let whisperModel = Transcriber.Model(rawValue: config.model.rawValue) ?? .base
         let transcriber = Transcriber(model: whisperModel, verbose: config.verbose)
         var segments = try await transcriber.transcribe(wavPath: wavPath)
@@ -180,12 +178,12 @@ struct TranscribeSummarize: AsyncParsableCommand {
         }
 
         // Step 3: Diarise (optional)
-        if config.verbose > 0 { print("Identifying speakers...") }
+        print("Identifying speakers...")
         let diarizer = Diarizer(verbose: config.verbose, speakerNames: config.speakers, device: config.device.rawValue)
         segments = try await diarizer.diarize(wavPath: wavPath, segments: segments)
 
         // Step 4: Summarise
-        if config.verbose > 0 { print("Generating summary...") }
+        print("Generating summary...")
         let transcriptText = segments.map { seg in
             let speaker = seg.speaker ?? "Speaker"
             return "[\(seg.startTimestamp)] \(speaker): \(seg.text)"
@@ -226,7 +224,7 @@ struct TranscribeSummarize: AsyncParsableCommand {
         }
 
         // Step 5: Write output
-        if config.verbose > 0 { print("Writing output...") }
+        print("Writing output...")
         let writer = MarkdownWriter(
             confidenceThreshold: config.confidence,
             includeTimestamps: config.timestamps,
