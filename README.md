@@ -7,9 +7,11 @@ Turn your meeting recordings into useful documents, automatically.
 - A full transcript with timestamps
 - Speaker labels ("Alice said this, Bob said that")
 
-**How it works:** Everything runs locally on your Mac - your audio never leaves your computer. The tool uses AI to transcribe speech (via whisper.cpp), identify different speakers (via speechbrain), and summarize the conversation (via Ollama).
+**How it works:** Everything runs locally on your Mac - your audio never leaves your computer.* The tool uses AI to transcribe speech (via whisper.cpp), identify different speakers (via speechbrain), and summarize the conversation (via Ollama).
 
 **No accounts needed:** Works out of the box without any API keys or signups. Just install and run.
+
+<sub>* If you optionally configure Claude or OpenAI API keys for summarization, your transcript text (not audio) will be sent to those services.</sub>
 
 *macOS only — requires Apple Silicon or Intel Mac.*
 
