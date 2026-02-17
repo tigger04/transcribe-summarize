@@ -1,5 +1,5 @@
 // ABOUTME: Wrapper for whisper.cpp to transcribe audio files.
-// ABOUTME: Handles model downloading, transcription, and JSON parsing.
+// ABOUTME: Handles model downloading, transcription, JSON parsing, and native output formats.
 
 import Foundation
 
@@ -68,6 +68,29 @@ struct Transcriber {
         return nil
     }
 
+    /// Output formats supported by whisper-cli native output.
+    enum OutputFormat {
+        case srt       // --output-srt
+        case vtt       // --output-vtt
+        case jsonFull  // --output-json-full (word-level timestamps with --dtw)
+
+        var whisperFlag: String {
+            switch self {
+            case .srt: return "-osrt"
+            case .vtt: return "-ovtt"
+            case .jsonFull: return "-ojf"
+            }
+        }
+
+        var fileExtension: String {
+            switch self {
+            case .srt: return ".srt"
+            case .vtt: return ".vtt"
+            case .jsonFull: return ".json"
+            }
+        }
+    }
+
     func transcribe(wavPath: String) async throws -> [Segment] {
         guard let whisperBinary = findWhisperBinary() else {
             throw TranscribeError.whisperNotFound
@@ -77,6 +100,81 @@ struct Transcriber {
         let segments = try await runWhisper(wavPath: wavPath, modelPath: modelPath, binary: whisperBinary)
 
         return segments
+    }
+
+    /// Run whisper-cli and let it write the output file directly (SRT, VTT, or JSON).
+    /// Returns the path to the generated output file.
+    func transcribeDirect(wavPath: String, format: OutputFormat, outputBase: String) async throws -> String {
+        guard let whisperBinary = findWhisperBinary() else {
+            throw TranscribeError.whisperNotFound
+        }
+
+        let modelPath = try await ensureModel()
+
+        var args = [
+            "-m", modelPath,
+            "-f", wavPath,
+            format.whisperFlag,
+            "-of", outputBase,
+            "-pp"
+        ]
+
+        // For word-level JSON, enable dynamic time warping for token timestamps
+        if format == .jsonFull {
+            args += ["--dtw", model.rawValue]
+        }
+
+        if verbose > 0 {
+            print("Running \(whisperBinary) (\(format.fileExtension) output)...")
+        }
+
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
+        process.arguments = [whisperBinary] + args
+        process.standardInput = FileHandle.nullDevice
+
+        let stderrPipe = Pipe()
+        process.standardError = stderrPipe
+        process.standardOutput = verbose > 1 ? nil : FileHandle.nullDevice
+
+        let stderrBuffer = StderrBuffer()
+        let verboseLevel = self.verbose
+
+        stderrPipe.fileHandleForReading.readabilityHandler = { handle in
+            let data = handle.availableData
+            if !data.isEmpty {
+                stderrBuffer.append(data)
+                if let output = String(data: data, encoding: .utf8) {
+                    for line in output.components(separatedBy: "\n") {
+                        let trimmed = line.trimmingCharacters(in: .whitespaces)
+                        if trimmed.contains("progress =") {
+                            print("\r  \(trimmed)", terminator: "")
+                            fflush(stdout)
+                        } else if verboseLevel > 1 && !trimmed.isEmpty {
+                            print(trimmed)
+                        }
+                    }
+                }
+            }
+        }
+
+        try process.run()
+        process.waitUntilExit()
+
+        stderrPipe.fileHandleForReading.readabilityHandler = nil
+        print()
+
+        guard process.terminationStatus == 0 else {
+            let stderr = String(data: stderrBuffer.getData(), encoding: .utf8) ?? "Unknown error"
+            throw TranscribeError.transcriptionFailed(stderr)
+        }
+
+        let outputPath = outputBase + format.fileExtension
+        guard FileManager.default.fileExists(atPath: outputPath) else {
+            throw TranscribeError.parseError("Expected output file not found: \(outputPath)")
+        }
+
+        return outputPath
     }
 
     private func ensureModel() async throws -> String {
@@ -224,18 +322,4 @@ struct Transcriber {
         }
     }
 
-    private func commandExists(_ command: String) -> Bool {
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/usr/bin/which")
-        process.arguments = [command]
-        process.standardOutput = FileHandle.nullDevice
-        process.standardError = FileHandle.nullDevice
-        do {
-            try process.run()
-            process.waitUntilExit()
-            return process.terminationStatus == 0
-        } catch {
-            return false
-        }
-    }
 }

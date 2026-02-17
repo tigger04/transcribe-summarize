@@ -1,8 +1,10 @@
-# ABOUTME: Build, test, and install targets for transcribe-summarize.
+# ABOUTME: Build, test, and install targets for transcribe.
 # ABOUTME: Use `make build` for release, `make test` to run tests, `make release` to publish.
 
 .PHONY: build test clean install install-venv uninstall release bump-version update-formula push-tap help _check-clean
 
+BINARY_NAME := transcribe
+LEGACY_NAME := transcribe-summarize
 VERSION := $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
 VENV_DIR := $(HOME)/.local/share/transcribe-summarize/venv
 REPO_URL := https://github.com/tigger04/transcribe-summarize
@@ -33,10 +35,12 @@ clean:
 
 install: build
 	install -d /usr/local/bin
-	install -m 755 .build/release/transcribe-summarize /usr/local/bin/
+	install -m 755 .build/release/$(BINARY_NAME) /usr/local/bin/
+	ln -sf $(BINARY_NAME) /usr/local/bin/$(LEGACY_NAME)
 	install -d /usr/local/share/transcribe-summarize
 	install -m 644 scripts/diarize.py /usr/local/share/transcribe-summarize/
 	@echo "Installed. Diarization venv will be created on first use."
+	@echo "Note: '$(LEGACY_NAME)' symlink installed for backward compatibility."
 
 install-venv:
 	@echo "Setting up Python virtual environment for diarization..."
@@ -47,7 +51,8 @@ install-venv:
 	@echo "Diarization environment ready at $(VENV_DIR)"
 
 uninstall:
-	rm -f /usr/local/bin/transcribe-summarize
+	rm -f /usr/local/bin/$(BINARY_NAME)
+	rm -f /usr/local/bin/$(LEGACY_NAME)
 	rm -rf /usr/local/share/transcribe-summarize
 	rm -rf $(VENV_DIR)
 
@@ -70,7 +75,7 @@ help:
 	@echo "  push-tap         - Copy formula to Homebrew tap and push"
 
 # Release management
-# Usage: make release (auto-increments) or make release V=0.2.0
+# Usage: make release (auto-increments) or make release V=0.3.0
 release: _check-clean test bump-version
 	@echo "Creating release v$(V)..."
 	git add Sources/TranscribeSummarize/main.swift

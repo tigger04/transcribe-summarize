@@ -8,7 +8,7 @@ let package = Package(
     name: "transcribe-summarize",
     platforms: [.macOS(.v13)],
     products: [
-        .executable(name: "transcribe-summarize", targets: ["TranscribeSummarize"])
+        .executable(name: "transcribe", targets: ["TranscribeSummarize"])
     ],
     dependencies: [
         .package(url: "https://github.com/apple/swift-argument-parser.git", from: "1.3.0"),

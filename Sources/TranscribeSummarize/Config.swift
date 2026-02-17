@@ -134,7 +134,7 @@ struct Config {
         let resolvedModel = WhisperModel(rawValue: model)
             ?? (yamlConfig?["model"] as? String).flatMap { WhisperModel(rawValue: $0) }
             ?? ProcessInfo.processInfo.environment["TRANSCRIBE_MODEL"].flatMap { WhisperModel(rawValue: $0) }
-            ?? .base
+            ?? .small
 
         // Resolve LLM: CLI > YAML > env > default (auto)
         let resolvedLLM = llm != "auto" ? llm
@@ -200,6 +200,15 @@ struct Config {
         }
 
         return true
+    }
+
+    /// Resolve the default whisper model from YAML config or environment.
+    /// Used by subcommands that resolve model independently of full Config.load().
+    static func resolveDefaultModel() -> WhisperModel {
+        let yamlConfig = loadYAMLConfig()
+        return (yamlConfig?["model"] as? String).flatMap { WhisperModel(rawValue: $0) }
+            ?? ProcessInfo.processInfo.environment["TRANSCRIBE_MODEL"].flatMap { WhisperModel(rawValue: $0) }
+            ?? .small
     }
 
     private static func loadYAMLConfig() -> [String: Any]? {
