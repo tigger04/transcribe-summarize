@@ -1,7 +1,7 @@
 # ABOUTME: Build, test, and install targets for transcribe.
 # ABOUTME: Use `make build` for release, `make test` to run tests, `make release` to publish.
 
-.PHONY: build test clean install install-venv uninstall release bump-version update-formula push-tap help _check-clean
+.PHONY: build test clean install install-venv uninstall release bump-version update-formula push-tap sync help _check-clean
 
 BINARY_NAME := transcribe
 LEGACY_NAME := transcribe-summarize
@@ -56,6 +56,19 @@ uninstall:
 	rm -rf /usr/local/share/transcribe-summarize
 	rm -rf $(VENV_DIR)
 
+sync:
+	@echo "Syncing with remote..."
+	@if [ -n "$$(git status --porcelain)" ]; then \
+		git add --all; \
+		git commit -m "$${M:-sync}"; \
+		echo "Changes committed."; \
+	else \
+		echo "Working tree clean, nothing to commit."; \
+	fi
+	git pull --rebase origin $$(git branch --show-current)
+	git push origin $$(git branch --show-current)
+	@echo "Sync complete."
+
 help:
 	@echo "Available targets:"
 	@echo "  build         - Build release binary"
@@ -66,6 +79,7 @@ help:
 	@echo "  install       - Install binary (venv created on first diarization use)"
 	@echo "  install-venv  - Pre-install diarization Python environment"
 	@echo "  uninstall     - Remove installed files and venv"
+	@echo "  sync          - Stage all, commit, pull (rebase), push"
 	@echo ""
 	@echo "Release targets:"
 	@echo "  release          - Full release: auto-increment version, tag, update formula, push tap"
