@@ -4,8 +4,8 @@
 class TranscribeSummarize < Formula
   desc "Transcribe audio, generate subtitles, summarize via Ollama/Claude/OpenAI"
   homepage "https://github.com/tigger04/transcribe-summarize"
-  url "https://github.com/tigger04/transcribe-summarize/archive/refs/tags/v0.2.17.tar.gz"
-  sha256 "356d0c496aeeb6577c39a4e3f7e74686b95231bef674b7e69194ab240a033a35"
+  url "https://github.com/tigger04/transcribe-summarize/archive/refs/tags/v0.2.18.tar.gz"
+  sha256 "f668d3909a2a0b539dcaed2c056d383f88e254350dc783e036f9cb67cdfcf8a2"
   license "MIT"
 
   depends_on xcode: ["15.0", :build]
