@@ -12,6 +12,12 @@ struct VTTCommand: AsyncParsableCommand {
 
     @OptionGroup var common: CommonOptions
 
+    @Option(name: .long, help: "Maximum subtitle line length in characters (0 = unlimited)")
+    var maxLen: Int = 0
+
+    @Flag(name: .long, help: "Split at word boundaries when using --max-len")
+    var splitOnWord: Bool = false
+
     mutating func run() async throws {
         guard common.validateInput() else {
             throw ExitCode.validationFailure
@@ -44,7 +50,9 @@ struct VTTCommand: AsyncParsableCommand {
         if hasSpeakers {
             // Diarized path: transcribe → diarize → custom VTTWriter
             print("Transcribing...")
-            var segments = try await transcriber.transcribe(wavPath: wavPath)
+            var segments = try await transcriber.transcribe(
+                wavPath: wavPath, maxLen: maxLen, splitOnWord: splitOnWord
+            )
 
             print("Identifying speakers...")
             let speakerNames = common.parseSpeakerNames()
@@ -63,7 +71,9 @@ struct VTTCommand: AsyncParsableCommand {
             let vttPath = try await transcriber.transcribeDirect(
                 wavPath: wavPath,
                 format: .vtt,
-                outputBase: tempBase
+                outputBase: tempBase,
+                maxLen: maxLen,
+                splitOnWord: splitOnWord
             )
             tempFiles.append(vttPath)
             try FileManager.default.copyItem(atPath: vttPath, toPath: outputPath)

@@ -12,6 +12,12 @@ struct SRTCommand: AsyncParsableCommand {
 
     @OptionGroup var common: CommonOptions
 
+    @Option(name: .long, help: "Maximum subtitle line length in characters (0 = unlimited)")
+    var maxLen: Int = 0
+
+    @Flag(name: .long, help: "Split at word boundaries when using --max-len")
+    var splitOnWord: Bool = false
+
     mutating func run() async throws {
         guard common.validateInput() else {
             throw ExitCode.validationFailure
@@ -44,7 +50,9 @@ struct SRTCommand: AsyncParsableCommand {
         if hasSpeakers {
             // Diarized path: transcribe → diarize → custom SRTWriter
             print("Transcribing...")
-            var segments = try await transcriber.transcribe(wavPath: wavPath)
+            var segments = try await transcriber.transcribe(
+                wavPath: wavPath, maxLen: maxLen, splitOnWord: splitOnWord
+            )
 
             print("Identifying speakers...")
             let speakerNames = common.parseSpeakerNames()
@@ -63,7 +71,9 @@ struct SRTCommand: AsyncParsableCommand {
             let srtPath = try await transcriber.transcribeDirect(
                 wavPath: wavPath,
                 format: .srt,
-                outputBase: tempBase
+                outputBase: tempBase,
+                maxLen: maxLen,
+                splitOnWord: splitOnWord
             )
             tempFiles.append(srtPath)
             try FileManager.default.copyItem(atPath: srtPath, toPath: outputPath)

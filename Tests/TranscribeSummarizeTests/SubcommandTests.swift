@@ -81,6 +81,64 @@ final class SubcommandTests: XCTestCase {
         XCTAssertEqual(path, "/path/to/meeting.md")
     }
 
+    // MARK: - Whisper Args Tests
+
+    func testTranscriberWhisperArgsDefaultNoMaxLen() {
+        let transcriber = Transcriber(model: .tiny, verbose: 0)
+        let args = transcriber.buildWhisperArgs(
+            modelPath: "/models/ggml-tiny.bin",
+            wavPath: "/tmp/test.wav",
+            maxLen: 0,
+            splitOnWord: false
+        )
+
+        XCTAssertFalse(args.contains("-ml"), "Should not include -ml when maxLen is 0")
+        XCTAssertFalse(args.contains("-sow"), "Should not include -sow when splitOnWord is false")
+    }
+
+    func testTranscriberWhisperArgsWithMaxLen() {
+        let transcriber = Transcriber(model: .tiny, verbose: 0)
+        let args = transcriber.buildWhisperArgs(
+            modelPath: "/models/ggml-tiny.bin",
+            wavPath: "/tmp/test.wav",
+            maxLen: 42,
+            splitOnWord: false
+        )
+
+        XCTAssertTrue(args.contains("-ml"), "Should include -ml flag")
+        if let idx = args.firstIndex(of: "-ml") {
+            XCTAssertEqual(args[args.index(after: idx)], "42", "maxLen value should be 42")
+        }
+        XCTAssertFalse(args.contains("-sow"), "Should not include -sow when splitOnWord is false")
+    }
+
+    func testTranscriberWhisperArgsWithMaxLenAndSplitOnWord() {
+        let transcriber = Transcriber(model: .tiny, verbose: 0)
+        let args = transcriber.buildWhisperArgs(
+            modelPath: "/models/ggml-tiny.bin",
+            wavPath: "/tmp/test.wav",
+            maxLen: 30,
+            splitOnWord: true
+        )
+
+        XCTAssertTrue(args.contains("-ml"), "Should include -ml flag")
+        XCTAssertTrue(args.contains("-sow"), "Should include -sow flag")
+    }
+
+    func testTranscriberWhisperArgsSplitOnWordWithoutMaxLenIgnored() {
+        let transcriber = Transcriber(model: .tiny, verbose: 0)
+        let args = transcriber.buildWhisperArgs(
+            modelPath: "/models/ggml-tiny.bin",
+            wavPath: "/tmp/test.wav",
+            maxLen: 0,
+            splitOnWord: true
+        )
+
+        // splitOnWord without maxLen is meaningless; neither flag should appear
+        XCTAssertFalse(args.contains("-ml"), "Should not include -ml when maxLen is 0")
+        XCTAssertFalse(args.contains("-sow"), "Should not include -sow when maxLen is 0")
+    }
+
     // MARK: - Helper
 
     /// Mirrors the output path resolution logic used by subcommands.

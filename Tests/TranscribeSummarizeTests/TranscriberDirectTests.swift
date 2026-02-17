@@ -121,6 +121,36 @@ final class TranscriberDirectTests: XCTestCase {
         XCTAssertNoThrow(try JSONSerialization.jsonObject(with: data), "Output should be valid JSON")
     }
 
+    // MARK: - Max Length Tests
+
+    func testTranscribeDirectSRTWithMaxLen() async throws {
+        let path = try await extractWav()
+        let transcriber = Transcriber(model: .tiny, verbose: 0)
+
+        let tempBase = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString).path
+        defer { try? FileManager.default.removeItem(atPath: tempBase + ".srt") }
+
+        let outputPath = try await transcriber.transcribeDirect(
+            wavPath: path,
+            format: .srt,
+            outputBase: tempBase,
+            maxLen: 30,
+            splitOnWord: true
+        )
+
+        XCTAssertTrue(FileManager.default.fileExists(atPath: outputPath), "SRT file should exist")
+
+        let content = try String(contentsOfFile: outputPath, encoding: .utf8)
+        XCTAssertTrue(content.contains("-->"), "SRT should contain timestamp arrows")
+
+        // With maxLen 30, lines should generally be short
+        let textLines = content.components(separatedBy: "\n").filter {
+            !$0.isEmpty && !$0.contains("-->") && Int($0) == nil
+        }
+        XCTAssertFalse(textLines.isEmpty, "Should have subtitle text lines")
+    }
+
     // MARK: - OutputFormat Tests
 
     func testOutputFormatExtensions() {

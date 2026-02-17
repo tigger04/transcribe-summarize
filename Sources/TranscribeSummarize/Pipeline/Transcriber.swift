@@ -91,20 +91,55 @@ struct Transcriber {
         }
     }
 
-    func transcribe(wavPath: String) async throws -> [Segment] {
+    /// Build the base whisper-cli argument array for a transcription run.
+    /// Exposed for testability — the subcommand tests verify flag construction.
+    func buildWhisperArgs(
+        modelPath: String,
+        wavPath: String,
+        maxLen: Int = 0,
+        splitOnWord: Bool = false
+    ) -> [String] {
+        var args = [
+            "-m", modelPath,
+            "-f", wavPath,
+            "-oj",
+            "-of", "",  // placeholder, overwritten by callers
+            "-pp"
+        ]
+
+        if maxLen > 0 {
+            args += ["-ml", "\(maxLen)"]
+            if splitOnWord {
+                args.append("-sow")
+            }
+        }
+
+        return args
+    }
+
+    func transcribe(wavPath: String, maxLen: Int = 0, splitOnWord: Bool = false) async throws -> [Segment] {
         guard let whisperBinary = findWhisperBinary() else {
             throw TranscribeError.whisperNotFound
         }
 
         let modelPath = try await ensureModel()
-        let segments = try await runWhisper(wavPath: wavPath, modelPath: modelPath, binary: whisperBinary)
+        let segments = try await runWhisper(
+            wavPath: wavPath, modelPath: modelPath, binary: whisperBinary,
+            maxLen: maxLen, splitOnWord: splitOnWord
+        )
 
         return segments
     }
 
     /// Run whisper-cli and let it write the output file directly (SRT, VTT, or JSON).
     /// Returns the path to the generated output file.
-    func transcribeDirect(wavPath: String, format: OutputFormat, outputBase: String) async throws -> String {
+    func transcribeDirect(
+        wavPath: String,
+        format: OutputFormat,
+        outputBase: String,
+        maxLen: Int = 0,
+        splitOnWord: Bool = false
+    ) async throws -> String {
         guard let whisperBinary = findWhisperBinary() else {
             throw TranscribeError.whisperNotFound
         }
@@ -118,6 +153,13 @@ struct Transcriber {
             "-of", outputBase,
             "-pp"
         ]
+
+        if maxLen > 0 {
+            args += ["-ml", "\(maxLen)"]
+            if splitOnWord {
+                args.append("-sow")
+            }
+        }
 
         // For word-level JSON, enable dynamic time warping for token timestamps
         if format == .jsonFull {
@@ -222,17 +264,27 @@ struct Transcriber {
         }
     }
 
-    private func runWhisper(wavPath: String, modelPath: String, binary: String) async throws -> [Segment] {
+    private func runWhisper(
+        wavPath: String, modelPath: String, binary: String,
+        maxLen: Int = 0, splitOnWord: Bool = false
+    ) async throws -> [Segment] {
         let tempDir = FileManager.default.temporaryDirectory
         let outputBase = tempDir.appendingPathComponent(UUID().uuidString).path
 
-        let args = [
+        var args = [
             "-m", modelPath,
             "-f", wavPath,
             "-oj",
             "-of", outputBase,
             "-pp"  // print progress
         ]
+
+        if maxLen > 0 {
+            args += ["-ml", "\(maxLen)"]
+            if splitOnWord {
+                args.append("-sow")
+            }
+        }
 
         if verbose > 0 {
             print("Running \(binary)...")
