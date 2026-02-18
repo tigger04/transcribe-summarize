@@ -15,8 +15,8 @@ struct VTTCommand: AsyncParsableCommand {
     @Option(name: .long, help: "Maximum subtitle line length in characters (0 = unlimited)")
     var maxLen: Int = 0
 
-    @Flag(name: .long, help: "Split at word boundaries when using --max-len")
-    var splitOnWord: Bool = false
+    @Flag(inversion: .prefixedNo, help: "Split at word boundaries when using --max-len (default: true)")
+    var splitOnWord: Bool = true
 
     mutating func run() async throws {
         guard common.validateInput() else {

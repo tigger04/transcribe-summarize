@@ -169,7 +169,7 @@ transcribe srt --speakers "Alice,Bob" meeting.m4a
 transcribe vtt --speakers "Alice,Bob" meeting.m4a
 
 # Short subtitles for social media
-transcribe srt --max-len 42 --split-on-word video.mp4
+transcribe srt --max-len 42 video.mp4
 
 # With options
 transcribe summarize meeting.m4a -o summary.md --model medium -v
@@ -194,9 +194,9 @@ transcribe summarize meeting.m4a --dry-run
 | Flag | Description | Default |
 |------|-------------|---------|
 | `--max-len N` | Maximum subtitle line length in characters | `0` (unlimited) |
-| `--split-on-word` | Split at word boundaries when using `--max-len` | `false` |
+| `--split-on-word` / `--no-split-on-word` | Split at word boundaries when using `--max-len` | `true` |
 
-For social media subtitles, try `--max-len 42 --split-on-word` for short, readable lines.
+For social media subtitles, try `--max-len 42` for short, readable lines.
 
 ### Summarize-specific Flags
 
