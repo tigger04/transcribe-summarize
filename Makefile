@@ -34,13 +34,14 @@ clean:
 	rm -rf .build
 
 install: build
-	install -d /usr/local/bin
-	install -m 755 .build/release/$(BINARY_NAME) /usr/local/bin/
-	ln -sf $(BINARY_NAME) /usr/local/bin/$(LEGACY_NAME)
-	install -d /usr/local/share/transcribe-summarize
-	install -m 644 scripts/diarize.py /usr/local/share/transcribe-summarize/
-	@echo "Installed. Diarization venv will be created on first use."
+	install -d $(HOME)/.local/bin
+	ln -sf $(CURDIR)/.build/release/$(BINARY_NAME) $(HOME)/.local/bin/$(BINARY_NAME)
+	ln -sf $(BINARY_NAME) $(HOME)/.local/bin/$(LEGACY_NAME)
+	install -d $(HOME)/.local/share/transcribe-summarize
+	install -m 644 scripts/diarize.py $(HOME)/.local/share/transcribe-summarize/
+	@echo "Installed to ~/.local/bin/ (symlinked to build output)."
 	@echo "Note: '$(LEGACY_NAME)' symlink installed for backward compatibility."
+	@echo "Ensure ~/.local/bin is in your PATH."
 
 install-venv:
 	@echo "Setting up Python virtual environment for diarization..."
@@ -51,9 +52,9 @@ install-venv:
 	@echo "Diarization environment ready at $(VENV_DIR)"
 
 uninstall:
-	rm -f /usr/local/bin/$(BINARY_NAME)
-	rm -f /usr/local/bin/$(LEGACY_NAME)
-	rm -rf /usr/local/share/transcribe-summarize
+	rm -f $(HOME)/.local/bin/$(BINARY_NAME)
+	rm -f $(HOME)/.local/bin/$(LEGACY_NAME)
+	rm -rf $(HOME)/.local/share/transcribe-summarize
 	rm -rf $(VENV_DIR)
 
 sync:
