@@ -20,7 +20,7 @@ struct Transcribe: AsyncParsableCommand {
 
             All subcommands support --speakers for speaker diarization.
             """,
-        version: "0.2.20",
+        version: "0.2.21",
         subcommands: [SummarizeCommand.self, SRTCommand.self, VTTCommand.self, WordsCommand.self]
     )
 
