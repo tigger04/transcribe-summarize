@@ -27,12 +27,31 @@ enum ConfigStore {
         return ProcessInfo.processInfo.environment[envKey]
     }
 
-    /// Resolve a secret from environment variable first, then config file.
+    /// Resolve a secret from environment variable first, then command, then config file.
     /// Environment variables are preferred for secrets to avoid storing them in files.
+    /// Commands (e.g. `anthropic_api_key_command`) are checked between env and plain value.
     static func resolveSecret(configKey: String, envKey: String) -> String? {
         load()
         if let value = ProcessInfo.processInfo.environment[envKey], !value.isEmpty {
             return value
+        }
+        if let commandValue = runConfigCommand(for: configKey) {
+            return commandValue
+        }
+        return yamlConfig?[configKey] as? String
+    }
+
+    /// Resolve a secret with multiple possible environment variable names.
+    /// Priority: any env var > command > plain config value.
+    static func resolveSecret(configKey: String, envKeys: [String]) -> String? {
+        load()
+        for key in envKeys {
+            if let value = ProcessInfo.processInfo.environment[key], !value.isEmpty {
+                return value
+            }
+        }
+        if let commandValue = runConfigCommand(for: configKey) {
+            return commandValue
         }
         return yamlConfig?[configKey] as? String
     }
@@ -51,10 +70,74 @@ enum ConfigStore {
         return nil
     }
 
+    /// Run a `<configKey>_command` from YAML config and return its stdout.
+    /// Returns nil if the command key is absent, the command fails, or output is empty.
+    /// Command stderr is suppressed; timeout is 10 seconds.
+    private static func runConfigCommand(for configKey: String) -> String? {
+        let commandKey = "\(configKey)_command"
+        guard let command = yamlConfig?[commandKey] as? String, !command.isEmpty else {
+            return nil
+        }
+
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/bin/sh")
+        process.arguments = ["-c", command]
+        process.standardError = FileHandle.nullDevice
+
+        let pipe = Pipe()
+        process.standardOutput = pipe
+
+        do {
+            try process.run()
+        } catch {
+            fputs("Warning: failed to run \(commandKey): \(error.localizedDescription)\n", stderr)
+            return nil
+        }
+
+        // 10-second timeout
+        let deadline = DispatchTime.now() + .seconds(10)
+        let group = DispatchGroup()
+        group.enter()
+        DispatchQueue.global().async {
+            process.waitUntilExit()
+            group.leave()
+        }
+
+        if group.wait(timeout: deadline) == .timedOut {
+            process.terminate()
+            fputs("Warning: \(commandKey) timed out after 10 seconds\n", stderr)
+            return nil
+        }
+
+        guard process.terminationStatus == 0 else {
+            return nil
+        }
+
+        let data = pipe.fileHandleForReading.readDataToEndOfFile()
+        guard let output = String(data: data, encoding: .utf8) else {
+            return nil
+        }
+
+        let trimmed = output.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? nil : trimmed
+    }
+
     /// Resolve an array value from config file.
     static func resolveArray(configKey: String) -> [String]? {
         load()
         return yamlConfig?[configKey] as? [String]
+    }
+
+    /// Reset ConfigStore state. Internal for testing.
+    static func _resetForTesting() {
+        yamlConfig = nil
+        isLoaded = false
+    }
+
+    /// Inject test config without loading from disk. Internal for testing.
+    static func _setTestConfig(_ config: [String: Any]) {
+        yamlConfig = config
+        isLoaded = true
     }
 
     private static func loadYAMLConfig() -> [String: Any]? {

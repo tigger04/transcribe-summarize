@@ -85,7 +85,7 @@ struct Diarizer {
             throw DiarizeError.scriptNotFound
         }
 
-        let token = ConfigStore.resolve(configKey: "hf_token", envKeys: ["HF_TOKEN", "HUGGINGFACE_TOKEN"])
+        let token = ConfigStore.resolveSecret(configKey: "hf_token", envKeys: ["HF_TOKEN", "HUGGINGFACE_TOKEN"])
         let backend = token != nil ? "pyannote" : "speechbrain"
 
         print("  Using \(backend) backend on \(device)")

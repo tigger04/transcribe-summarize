@@ -251,6 +251,19 @@ hf_token: hf_...               # Overridden by HF_TOKEN env var
 
 Config priority: local `.transcribe.yaml` > `~/.config/transcribe-summarize/config.yaml` > legacy `~/.transcribe.yaml`
 
+#### Secret Resolution via Commands
+
+Instead of storing API keys in plain text, you can point to a command that retrieves them from a secrets manager. Add a `_command` suffix to any secret config key:
+
+```yaml
+# Command-based secrets (recommended)
+anthropic_api_key_command: "op read op://Private/Anthropic/api-key"     # 1Password
+openai_api_key_command: "pass show openai/api-key"                      # pass
+hf_token_command: "security find-generic-password -s hf_token -w"       # macOS Keychain
+```
+
+The command runs via `/bin/sh -c`, must print the secret to stdout, and has a 10-second timeout. Resolution priority for secrets: environment variable > command > plain config value.
+
 **How speaker naming works:** Names are assigned in order of first appearance in the audio. The first person to speak gets the first name, second speaker gets the second name, etc.
 
 Tips for correct speaker assignment:
@@ -258,7 +271,7 @@ Tips for correct speaker assignment:
 2. Or run once without names, check the transcript to identify speakers, then re-run with correctly ordered names
 3. Or just edit the output to swap names if needed
 
-**Security note:** Environment variables take precedence over config file for API keys. Prefer env vars to avoid storing secrets in files.
+**Security note:** Environment variables take precedence over config file for API keys. Use `_command` keys with a secrets manager, or env vars, to avoid storing secrets in plain text files.
 
 ## Output Formats
 
