@@ -54,7 +54,7 @@ final class TranscriberDirectTests: XCTestCase {
 
     func testTranscribeDirectSRT() async throws {
         let path = try await extractWav()
-        let transcriber = Transcriber(model: .tiny, verbose: 0)
+        let transcriber = Transcriber(model: .known(.tiny), verbose: 0)
 
         let tempBase = FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString).path
@@ -76,7 +76,7 @@ final class TranscriberDirectTests: XCTestCase {
 
     func testTranscribeDirectVTT() async throws {
         let path = try await extractWav()
-        let transcriber = Transcriber(model: .tiny, verbose: 0)
+        let transcriber = Transcriber(model: .known(.tiny), verbose: 0)
 
         let tempBase = FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString).path
@@ -98,7 +98,7 @@ final class TranscriberDirectTests: XCTestCase {
 
     func testTranscribeDirectJSONFull() async throws {
         let path = try await extractWav()
-        let transcriber = Transcriber(model: .tiny, verbose: 0)
+        let transcriber = Transcriber(model: .known(.tiny), verbose: 0)
 
         let tempBase = FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString).path
@@ -125,7 +125,7 @@ final class TranscriberDirectTests: XCTestCase {
 
     func testTranscribeDirectSRTWithMaxLen() async throws {
         let path = try await extractWav()
-        let transcriber = Transcriber(model: .tiny, verbose: 0)
+        let transcriber = Transcriber(model: .known(.tiny), verbose: 0)
 
         let tempBase = FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString).path

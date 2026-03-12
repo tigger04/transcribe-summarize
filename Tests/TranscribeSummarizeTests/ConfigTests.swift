@@ -129,7 +129,7 @@ final class ConfigTests: XCTestCase {
             dryRun: true
         )
 
-        XCTAssertEqual(config.model, .small)
+        XCTAssertEqual(config.modelName, "small")
     }
 
     // MARK: - LLM Auto-Selection Tests

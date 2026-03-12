@@ -64,7 +64,7 @@ struct SummarizeCommand: AsyncParsableCommand {
 
         print("Configuration:")
         print("  Output: \(config.outputPath)")
-        print("  Whisper model: \(config.model.rawValue)")
+        print("  Whisper model: \(config.modelName)")
         if config.llm == "auto" {
             let selector = LLMSelector()
             if let selected = selector.selectProvider() {
@@ -136,8 +136,7 @@ struct SummarizeCommand: AsyncParsableCommand {
 
         // Step 2: Transcribe
         print("Transcribing...")
-        let whisperModel = Transcriber.Model(rawValue: config.model.rawValue) ?? .small
-        let transcriber = Transcriber(model: whisperModel, verbose: config.verbose)
+        let transcriber = Transcriber(model: config.model, verbose: config.verbose)
         var segments = try await transcriber.transcribe(wavPath: wavPath)
 
         if config.verbose > 0 {

@@ -47,12 +47,38 @@ struct Transcriber {
         }
     }
 
-    private let model: Model
+    /// A model specification that supports both known (auto-downloadable) and custom models.
+    enum ModelSpec {
+        case known(Model)
+        case custom(String)
+
+        /// Parse a model string. Returns .known for recognised names, .custom otherwise.
+        static func from(_ name: String) -> ModelSpec {
+            if let model = Model(rawValue: name) {
+                return .known(model)
+            }
+            return .custom(name)
+        }
+
+        var name: String {
+            switch self {
+            case .known(let model): return model.rawValue
+            case .custom(let name): return name
+            }
+        }
+
+        var filename: String { "ggml-\(name).bin" }
+    }
+
+    private let modelSpec: ModelSpec
     private let verbose: Int
     private let modelsDir: URL
 
-    init(model: Model, verbose: Int = 0) {
-        self.model = model
+    /// The model name string, exposed for testability and display.
+    var modelName: String { modelSpec.name }
+
+    init(model: ModelSpec, verbose: Int = 0) {
+        self.modelSpec = model
         self.verbose = verbose
         self.modelsDir = FileManager.default.homeDirectoryForCurrentUser
             .appendingPathComponent(".cache/whisper")
@@ -163,7 +189,7 @@ struct Transcriber {
 
         // For word-level JSON, enable dynamic time warping for token timestamps
         if format == .jsonFull {
-            args += ["--dtw", model.rawValue]
+            args += ["--dtw", modelSpec.name]
         }
 
         if verbose > 0 {
@@ -220,7 +246,7 @@ struct Transcriber {
     }
 
     private func ensureModel() async throws -> String {
-        let modelPath = modelsDir.appendingPathComponent(model.filename).path
+        let modelPath = modelsDir.appendingPathComponent(modelSpec.filename).path
 
         if FileManager.default.fileExists(atPath: modelPath) {
             if verbose > 0 {
@@ -229,21 +255,57 @@ struct Transcriber {
             return modelPath
         }
 
-        print("Model '\(model.rawValue)' not found. Downloading (~\(model.approximateSize))...")
+        switch modelSpec {
+        case .known(let model):
+            print("Model '\(model.rawValue)' not found. Downloading (~\(model.approximateSize))...")
 
-        try FileManager.default.createDirectory(at: modelsDir, withIntermediateDirectories: true)
+            try FileManager.default.createDirectory(at: modelsDir, withIntermediateDirectories: true)
 
-        let (data, response) = try await URLSession.shared.data(from: model.downloadURL)
+            let (data, response) = try await URLSession.shared.data(from: model.downloadURL)
 
-        guard let httpResponse = response as? HTTPURLResponse,
-              httpResponse.statusCode == 200 else {
-            throw TranscribeError.downloadFailed("HTTP error")
+            guard let httpResponse = response as? HTTPURLResponse,
+                  httpResponse.statusCode == 200 else {
+                throw TranscribeError.downloadFailed("HTTP error")
+            }
+
+            try data.write(to: URL(fileURLWithPath: modelPath))
+            print("Model downloaded: \(modelPath)")
+
+            return modelPath
+
+        case .custom(let name):
+            let availableModels = listAvailableModels()
+            var message = "Error: Model '\(name)' not found at \(modelPath)\n"
+            if !availableModels.isEmpty {
+                message += "Available models in \(modelsDir.path)/:\n"
+                for entry in availableModels {
+                    message += "  - \(entry)\n"
+                }
+            }
+            message += "Known models with auto-download: \(Model.allCases.map(\.rawValue).joined(separator: ", "))"
+            throw TranscribeError.modelNotFound(message)
         }
+    }
 
-        try data.write(to: URL(fileURLWithPath: modelPath))
-        print("Model downloaded: \(modelPath)")
-
-        return modelPath
+    /// List model files available in the cache directory.
+    private func listAvailableModels() -> [String] {
+        let fm = FileManager.default
+        guard let files = try? fm.contentsOfDirectory(atPath: modelsDir.path) else {
+            return []
+        }
+        return files
+            .filter { $0.hasPrefix("ggml-") && $0.hasSuffix(".bin") }
+            .sorted()
+            .compactMap { filename -> String? in
+                let name = String(filename.dropFirst(5).dropLast(4))  // strip "ggml-" and ".bin"
+                let path = modelsDir.appendingPathComponent(filename).path
+                guard let attrs = try? fm.attributesOfItem(atPath: path),
+                      let size = attrs[.size] as? UInt64 else {
+                    return name
+                }
+                let sizeStr = ByteCountFormatter.string(fromByteCount: Int64(size), countStyle: .file)
+                return "\(name) (\(filename), \(sizeStr))"
+            }
     }
 
     // Thread-safe buffer for capturing stderr while streaming progress

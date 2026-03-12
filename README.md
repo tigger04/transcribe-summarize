@@ -184,10 +184,30 @@ transcribe summarize meeting.m4a --dry-run
 |------|-------------|---------|
 | `-o, --output` | Output path | `<input>.<ext>` |
 | `-s, --speakers` | Speaker names (comma-separated or file) | Auto-detect |
-| `-m, --model` | Whisper model (tiny/base/small/medium/large) | `small` |
+| `-m, --model` | Whisper model name (see below) | `small` |
 | `--preprocess` | Audio preprocessing (auto/none/analyze) | `auto` |
 | `--device` | Compute device for diarization (auto/cpu/mps/cuda) | `auto` |
 | `-v` | Verbosity (-v, -vv, -vvv) | quiet |
+
+### Whisper Models
+
+Known models (`tiny`, `base`, `small`, `medium`, `large`) are auto-downloaded on first use to `~/.cache/whisper/`.
+
+You can also use any custom GGML model by name. Place the file in `~/.cache/whisper/` as `ggml-<name>.bin`:
+
+```bash
+# Known model (auto-downloads if missing)
+transcribe srt --model medium video.mp4
+
+# Custom model (must exist as ~/.cache/whisper/ggml-large-v3-turbo.bin)
+transcribe srt --model large-v3-turbo video.mp4
+```
+
+Set a default model in your config file:
+
+```yaml
+model: large-v3-turbo
+```
 
 ### Subtitle Flags (srt and vtt only)
 

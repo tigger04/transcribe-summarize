@@ -15,7 +15,7 @@ final class SubcommandTests: XCTestCase {
             speakers: nil,
             timestamps: true,
             confidence: 0.8,
-            model: "",  // Empty = no CLI override, should use default
+            model: "small",  // Explicit to avoid config file override
             llm: "auto",
             preprocess: "auto",
             device: "auto",
@@ -23,8 +23,8 @@ final class SubcommandTests: XCTestCase {
             dryRun: true
         )
 
-        // Default model should be small (not base) for better accent handling
-        XCTAssertEqual(config.model, .small, "Default model should be 'small' for better accent handling")
+        // Verify 'small' is accepted and resolved correctly
+        XCTAssertEqual(config.modelName, "small", "Model 'small' should resolve correctly")
     }
 
     // MARK: - Segment Millisecond Timestamp Tests
@@ -81,10 +81,78 @@ final class SubcommandTests: XCTestCase {
         XCTAssertEqual(path, "/path/to/meeting.md")
     }
 
+    // MARK: - Custom Model Tests
+
+    func testKnownModelFilename() {
+        let transcriber = Transcriber(model: .known(.small), verbose: 0)
+        XCTAssertEqual(transcriber.modelName, "small")
+    }
+
+    func testCustomModelFilename() {
+        let transcriber = Transcriber(model: .custom("large-v3-turbo"), verbose: 0)
+        XCTAssertEqual(transcriber.modelName, "large-v3-turbo")
+    }
+
+    func testTranscriberModelFromStringKnown() {
+        let model = Transcriber.ModelSpec.from("small")
+        if case .known(let m) = model {
+            XCTAssertEqual(m, .small)
+        } else {
+            XCTFail("Expected known model for 'small'")
+        }
+    }
+
+    func testTranscriberModelFromStringCustom() {
+        let model = Transcriber.ModelSpec.from("large-v3-turbo")
+        if case .custom(let name) = model {
+            XCTAssertEqual(name, "large-v3-turbo")
+        } else {
+            XCTFail("Expected custom model for 'large-v3-turbo'")
+        }
+    }
+
+    func testConfigResolvesCustomModel() throws {
+        let config = try Config.load(
+            inputFile: "/path/to/meeting.m4a",
+            output: nil,
+            speakers: nil,
+            timestamps: true,
+            confidence: 0.8,
+            model: "large-v3-turbo",
+            llm: "auto",
+            preprocess: "auto",
+            device: "auto",
+            verbose: 0,
+            dryRun: true
+        )
+
+        XCTAssertEqual(config.modelName, "large-v3-turbo",
+                       "Config should pass through custom model names")
+    }
+
+    func testConfigResolvesKnownModel() throws {
+        let config = try Config.load(
+            inputFile: "/path/to/meeting.m4a",
+            output: nil,
+            speakers: nil,
+            timestamps: true,
+            confidence: 0.8,
+            model: "medium",
+            llm: "auto",
+            preprocess: "auto",
+            device: "auto",
+            verbose: 0,
+            dryRun: true
+        )
+
+        XCTAssertEqual(config.modelName, "medium",
+                       "Config should resolve known model names")
+    }
+
     // MARK: - Whisper Args Tests
 
     func testTranscriberWhisperArgsDefaultNoMaxLen() {
-        let transcriber = Transcriber(model: .tiny, verbose: 0)
+        let transcriber = Transcriber(model: .known(.tiny), verbose: 0)
         let args = transcriber.buildWhisperArgs(
             modelPath: "/models/ggml-tiny.bin",
             wavPath: "/tmp/test.wav",
@@ -97,7 +165,7 @@ final class SubcommandTests: XCTestCase {
     }
 
     func testTranscriberWhisperArgsWithMaxLen() {
-        let transcriber = Transcriber(model: .tiny, verbose: 0)
+        let transcriber = Transcriber(model: .known(.tiny), verbose: 0)
         let args = transcriber.buildWhisperArgs(
             modelPath: "/models/ggml-tiny.bin",
             wavPath: "/tmp/test.wav",
@@ -113,7 +181,7 @@ final class SubcommandTests: XCTestCase {
     }
 
     func testTranscriberWhisperArgsWithMaxLenAndSplitOnWord() {
-        let transcriber = Transcriber(model: .tiny, verbose: 0)
+        let transcriber = Transcriber(model: .known(.tiny), verbose: 0)
         let args = transcriber.buildWhisperArgs(
             modelPath: "/models/ggml-tiny.bin",
             wavPath: "/tmp/test.wav",
@@ -126,7 +194,7 @@ final class SubcommandTests: XCTestCase {
     }
 
     func testTranscriberWhisperArgsSplitOnWordWithoutMaxLenIgnored() {
-        let transcriber = Transcriber(model: .tiny, verbose: 0)
+        let transcriber = Transcriber(model: .known(.tiny), verbose: 0)
         let args = transcriber.buildWhisperArgs(
             modelPath: "/models/ggml-tiny.bin",
             wavPath: "/tmp/test.wav",

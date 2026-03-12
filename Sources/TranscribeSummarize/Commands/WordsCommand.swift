@@ -38,8 +38,7 @@ struct WordsCommand: AsyncParsableCommand {
         )
         tempFiles.append(wavPath)
 
-        let transcriberModel = Transcriber.Model(rawValue: whisperModel.rawValue) ?? .small
-        let transcriber = Transcriber(model: transcriberModel, verbose: common.verbose)
+        let transcriber = Transcriber(model: whisperModel, verbose: common.verbose)
 
         // Generate word-level JSON via whisper-cli
         print("Transcribing to word-level JSON...")

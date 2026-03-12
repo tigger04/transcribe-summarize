@@ -89,7 +89,7 @@ struct Config {
     let speakers: [String]
     let timestamps: Bool
     let confidence: Double
-    let model: WhisperModel
+    let model: Transcriber.ModelSpec
     let llm: String
     let preprocess: PreprocessMode
     let device: DeviceMode
@@ -99,6 +99,9 @@ struct Config {
     enum WhisperModel: String, CaseIterable {
         case tiny, base, small, medium, large
     }
+
+    /// The model name as a string, for display and comparison.
+    var modelName: String { model.name }
 
     enum DeviceMode: String, CaseIterable {
         case auto, cpu, mps, cuda
@@ -131,10 +134,16 @@ struct Config {
             ?? []
 
         // Resolve model: CLI > YAML > env > default
-        let resolvedModel = WhisperModel(rawValue: model)
-            ?? (yamlConfig?["model"] as? String).flatMap { WhisperModel(rawValue: $0) }
-            ?? ProcessInfo.processInfo.environment["TRANSCRIBE_MODEL"].flatMap { WhisperModel(rawValue: $0) }
-            ?? .small
+        let resolvedModel: Transcriber.ModelSpec
+        if !model.isEmpty {
+            resolvedModel = Transcriber.ModelSpec.from(model)
+        } else if let yamlModel = yamlConfig?["model"] as? String, !yamlModel.isEmpty {
+            resolvedModel = Transcriber.ModelSpec.from(yamlModel)
+        } else if let envModel = ProcessInfo.processInfo.environment["TRANSCRIBE_MODEL"], !envModel.isEmpty {
+            resolvedModel = Transcriber.ModelSpec.from(envModel)
+        } else {
+            resolvedModel = .known(.small)
+        }
 
         // Resolve LLM: CLI > YAML > env > default (auto)
         let resolvedLLM = llm != "auto" ? llm
@@ -204,11 +213,15 @@ struct Config {
 
     /// Resolve the default whisper model from YAML config or environment.
     /// Used by subcommands that resolve model independently of full Config.load().
-    static func resolveDefaultModel() -> WhisperModel {
+    static func resolveDefaultModel() -> Transcriber.ModelSpec {
         let yamlConfig = loadYAMLConfig()
-        return (yamlConfig?["model"] as? String).flatMap { WhisperModel(rawValue: $0) }
-            ?? ProcessInfo.processInfo.environment["TRANSCRIBE_MODEL"].flatMap { WhisperModel(rawValue: $0) }
-            ?? .small
+        if let yamlModel = yamlConfig?["model"] as? String, !yamlModel.isEmpty {
+            return Transcriber.ModelSpec.from(yamlModel)
+        }
+        if let envModel = ProcessInfo.processInfo.environment["TRANSCRIBE_MODEL"], !envModel.isEmpty {
+            return Transcriber.ModelSpec.from(envModel)
+        }
+        return .known(.small)
     }
 
     private static func loadYAMLConfig() -> [String: Any]? {

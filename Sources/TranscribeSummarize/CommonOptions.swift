@@ -51,13 +51,11 @@ struct CommonOptions: ParsableArguments {
     }
 
     /// Resolve the whisper model, respecting CLI > YAML > env > default priority.
-    func resolveModel() -> Config.WhisperModel {
-        if let m = model, let resolved = Config.WhisperModel(rawValue: m) {
-            return resolved
+    func resolveModel() -> Transcriber.ModelSpec {
+        if let m = model, !m.isEmpty {
+            return Transcriber.ModelSpec.from(m)
         }
-        // Fall through to Config resolution with empty model string
-        return Config.WhisperModel(rawValue: model ?? "")
-            ?? Config.resolveDefaultModel()
+        return Config.resolveDefaultModel()
     }
 
     /// Validate that the input file exists and has a supported format.

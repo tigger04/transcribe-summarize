@@ -55,7 +55,7 @@ final class TranscriberTests: XCTestCase {
         wavPath = path
 
         // Use tiny model for speed
-        let transcriber = Transcriber(model: .tiny, verbose: 0)
+        let transcriber = Transcriber(model: .known(.tiny), verbose: 0)
         let segments = try await transcriber.transcribe(wavPath: path)
 
         // Verify we got segments
@@ -79,7 +79,7 @@ final class TranscriberTests: XCTestCase {
         let (path, _, _) = try await extractor.extract(from: samplePath, minimumDuration: 10.0, preprocess: .none)
         wavPath = path
 
-        let transcriber = Transcriber(model: .tiny, verbose: 0)
+        let transcriber = Transcriber(model: .known(.tiny), verbose: 0)
         let segments = try await transcriber.transcribe(wavPath: path)
 
         // Verify segments are in chronological order
@@ -93,7 +93,7 @@ final class TranscriberTests: XCTestCase {
     }
 
     func testTranscribeFailsForMissingFile() async throws {
-        let transcriber = Transcriber(model: .tiny, verbose: 0)
+        let transcriber = Transcriber(model: .known(.tiny), verbose: 0)
 
         do {
             _ = try await transcriber.transcribe(wavPath: "/nonexistent/audio.wav")

@@ -44,8 +44,7 @@ struct SRTCommand: AsyncParsableCommand {
         )
         tempFiles.append(wavPath)
 
-        let transcriberModel = Transcriber.Model(rawValue: whisperModel.rawValue) ?? .small
-        let transcriber = Transcriber(model: transcriberModel, verbose: common.verbose)
+        let transcriber = Transcriber(model: whisperModel, verbose: common.verbose)
 
         if hasSpeakers {
             // Diarized path: transcribe → diarize → custom SRTWriter
