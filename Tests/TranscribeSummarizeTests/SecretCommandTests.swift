@@ -1,5 +1,5 @@
-// ABOUTME: Tests for command-based secret resolution (issue #28).
-// ABOUTME: Verifies priority: env var > command > plain config value.
+// ABOUTME: Tests for command-based secret resolution (issues #28, #31).
+// ABOUTME: Verifies priority, command diagnostics, and failure warnings.
 
 import XCTest
 @testable import TranscribeSummarize
@@ -194,5 +194,96 @@ final class SecretCommandTests: XCTestCase {
         // Assert: plain value is used as last resort
         XCTAssertEqual(result, "plain-token",
                        "Plain config value should be used as last resort")
+    }
+
+    // MARK: - Command Diagnostic Tests (Issue #31)
+
+    /// RT-008: Failing command reports diagnostic with key name and exit status
+    func testCheckConfigCommandFailureReportsDiagnostic_RT008() {
+        // Arrange
+        ConfigStore._setTestConfig([
+            "api_key_command": "/usr/bin/false"
+        ])
+
+        // Act
+        let status = ConfigStore.checkConfigCommand(for: "api_key")
+
+        // Assert
+        if case .failed(let key, let exitCode) = status {
+            XCTAssertEqual(key, "api_key_command")
+            XCTAssertNotEqual(exitCode, 0)
+        } else {
+            XCTFail("Expected .failed status for non-zero exit, got \(status)")
+        }
+    }
+
+    /// RT-009: Absent command key returns .notConfigured with no diagnostic
+    func testCheckConfigCommandAbsentReturnsNotConfigured_RT009() {
+        // Arrange
+        ConfigStore._setTestConfig([
+            "api_key": "plain-value"
+        ])
+
+        // Act
+        let status = ConfigStore.checkConfigCommand(for: "api_key")
+
+        // Assert
+        if case .notConfigured = status {
+            // Expected — no warning should be emitted for absent keys
+        } else {
+            XCTFail("Expected .notConfigured for absent command key, got \(status)")
+        }
+    }
+
+    /// RT-010: LLMSelector error message references _command config keys
+    func testLLMSelectorErrorMessageReferencesCommandKeys_RT010() {
+        // Arrange: no providers available
+        ConfigStore._setTestConfig([:])
+
+        // Act
+        let selector = LLMSelector()
+        let message = selector.unavailableMessage()
+
+        // Assert
+        XCTAssertTrue(message.contains("_command"),
+                      "Error message should reference _command config keys")
+        XCTAssertTrue(message.contains("anthropic_api_key_command"),
+                      "Error message should mention anthropic_api_key_command")
+        XCTAssertTrue(message.contains("openai_api_key_command"),
+                      "Error message should mention openai_api_key_command")
+    }
+
+    func testCheckConfigCommandEmptyOutputReportsDiagnostic() {
+        // Arrange
+        ConfigStore._setTestConfig([
+            "api_key_command": "printf ''"
+        ])
+
+        // Act
+        let status = ConfigStore.checkConfigCommand(for: "api_key")
+
+        // Assert
+        if case .emptyOutput(let key) = status {
+            XCTAssertEqual(key, "api_key_command")
+        } else {
+            XCTFail("Expected .emptyOutput for empty command output, got \(status)")
+        }
+    }
+
+    func testCheckConfigCommandSuccessReturnsResolved() {
+        // Arrange
+        ConfigStore._setTestConfig([
+            "api_key_command": "echo test-value"
+        ])
+
+        // Act
+        let status = ConfigStore.checkConfigCommand(for: "api_key")
+
+        // Assert
+        if case .resolved = status {
+            // Expected
+        } else {
+            XCTFail("Expected .resolved for successful command, got \(status)")
+        }
     }
 }

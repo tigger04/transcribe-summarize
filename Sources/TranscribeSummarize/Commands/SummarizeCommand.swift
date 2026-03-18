@@ -102,11 +102,14 @@ struct SummarizeCommand: AsyncParsableCommand {
         printDependencyStatus("python3", optional: true, note: "for diarization")
         print()
 
-        print("Environment:")
+        print("Secrets:")
         printEnvStatus("ANTHROPIC_API_KEY", required: config.llm == "claude")
+        printCommandStatus("anthropic_api_key")
         printEnvStatus("OPENAI_API_KEY", required: config.llm == "openai")
+        printCommandStatus("openai_api_key")
         printEnvStatus("OLLAMA_MODEL", required: config.llm == "ollama")
         printEnvStatus("HF_TOKEN", optional: true, note: "for diarization")
+        printCommandStatus("hf_token")
     }
 
     private func runPipeline(config: Config) async throws {
@@ -159,10 +162,7 @@ struct SummarizeCommand: AsyncParsableCommand {
         if config.llm == "auto" {
             let selector = LLMSelector()
             guard let selected = selector.selectProvider() else {
-                fputs("Error: No LLM provider available. Configure one of:\n", stderr)
-                fputs("  - OLLAMA_MODEL (e.g., llama3.1:8b) for local Ollama\n", stderr)
-                fputs("  - ANTHROPIC_API_KEY for Claude\n", stderr)
-                fputs("  - OPENAI_API_KEY for OpenAI\n", stderr)
+                fputs(selector.unavailableMessage() + "\n", stderr)
                 throw ExitCode.failure
             }
             resolvedLLM = selected
@@ -216,5 +216,24 @@ struct SummarizeCommand: AsyncParsableCommand {
         if let note = note { line += " (\(note))" }
         if !exists && required { line += " — NOT SET" }
         print(line)
+    }
+
+    private func printCommandStatus(_ configKey: String) {
+        let commandKey = "\(configKey)_command"
+        let result = ConfigStore.checkConfigCommand(for: configKey)
+        switch result {
+        case .notConfigured:
+            print("  ○ \(commandKey) — not configured")
+        case .resolved:
+            print("  ✓ \(commandKey) — resolves successfully")
+        case .failed(_, let exitCode):
+            print("  ✗ \(commandKey) — exited with status \(exitCode)")
+        case .emptyOutput:
+            print("  ✗ \(commandKey) — produced empty output")
+        case .launchError(_, let message):
+            print("  ✗ \(commandKey) — failed to launch: \(message)")
+        case .timedOut:
+            print("  ✗ \(commandKey) — timed out after 10 seconds")
+        }
     }
 }

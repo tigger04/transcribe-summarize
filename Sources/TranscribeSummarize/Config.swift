@@ -4,6 +4,16 @@
 import Foundation
 import Yams
 
+/// Result of checking a `_command` config key.
+enum ConfigCommandStatus: Equatable {
+    case notConfigured
+    case resolved
+    case failed(key: String, exitCode: Int32)
+    case emptyOutput(key: String)
+    case launchError(key: String, message: String)
+    case timedOut(key: String)
+}
+
 /// Shared access to YAML config for token resolution.
 /// For secrets (API keys), environment variables take precedence over config file.
 /// For other settings, config file takes precedence over environment variables.
@@ -70,9 +80,62 @@ enum ConfigStore {
         return nil
     }
 
+    /// Check whether a `<configKey>_command` is configured and working.
+    /// Returns a diagnostic status without side effects.
+    static func checkConfigCommand(for configKey: String) -> ConfigCommandStatus {
+        load()
+        let commandKey = "\(configKey)_command"
+        guard let command = yamlConfig?[commandKey] as? String, !command.isEmpty else {
+            return .notConfigured
+        }
+
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/bin/sh")
+        process.arguments = ["-c", command]
+        process.standardError = FileHandle.nullDevice
+
+        let pipe = Pipe()
+        process.standardOutput = pipe
+
+        do {
+            try process.run()
+        } catch {
+            return .launchError(key: commandKey, message: error.localizedDescription)
+        }
+
+        let deadline = DispatchTime.now() + .seconds(10)
+        let group = DispatchGroup()
+        group.enter()
+        DispatchQueue.global().async {
+            process.waitUntilExit()
+            group.leave()
+        }
+
+        if group.wait(timeout: deadline) == .timedOut {
+            process.terminate()
+            return .timedOut(key: commandKey)
+        }
+
+        guard process.terminationStatus == 0 else {
+            return .failed(key: commandKey, exitCode: process.terminationStatus)
+        }
+
+        let data = pipe.fileHandleForReading.readDataToEndOfFile()
+        guard let output = String(data: data, encoding: .utf8) else {
+            return .failed(key: commandKey, exitCode: -1)
+        }
+
+        let trimmed = output.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.isEmpty {
+            return .emptyOutput(key: commandKey)
+        }
+
+        return .resolved
+    }
+
     /// Run a `<configKey>_command` from YAML config and return its stdout.
     /// Returns nil if the command key is absent, the command fails, or output is empty.
-    /// Command stderr is suppressed; timeout is 10 seconds.
+    /// Prints a warning to stderr on failure (but not when the key is simply absent).
     private static func runConfigCommand(for configKey: String) -> String? {
         let commandKey = "\(configKey)_command"
         guard let command = yamlConfig?[commandKey] as? String, !command.isEmpty else {
@@ -110,6 +173,7 @@ enum ConfigStore {
         }
 
         guard process.terminationStatus == 0 else {
+            fputs("Warning: \(commandKey) exited with status \(process.terminationStatus)\n", stderr)
             return nil
         }
 
@@ -119,7 +183,11 @@ enum ConfigStore {
         }
 
         let trimmed = output.trimmingCharacters(in: .whitespacesAndNewlines)
-        return trimmed.isEmpty ? nil : trimmed
+        if trimmed.isEmpty {
+            fputs("Warning: \(commandKey) produced empty output\n", stderr)
+            return nil
+        }
+        return trimmed
     }
 
     /// Resolve an array value from config file.
@@ -397,5 +465,16 @@ struct LLMSelector {
         default:
             return false
         }
+    }
+
+    /// Returns a user-facing message describing how to configure LLM providers.
+    /// Used when no provider is available, to mention both env vars and _command keys.
+    func unavailableMessage() -> String {
+        var lines: [String] = []
+        lines.append("Error: No LLM provider available. Configure one of:")
+        lines.append("  - OLLAMA_MODEL (e.g., llama3.1:8b) for local Ollama")
+        lines.append("  - ANTHROPIC_API_KEY for Claude (env var or anthropic_api_key_command in config)")
+        lines.append("  - OPENAI_API_KEY for OpenAI (env var or openai_api_key_command in config)")
+        return lines.joined(separator: "\n")
     }
 }
