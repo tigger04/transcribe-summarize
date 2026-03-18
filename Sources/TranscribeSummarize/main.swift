@@ -12,6 +12,7 @@ struct Transcribe: AsyncParsableCommand {
         discussion: """
             Subcommands:
               summarize  - Full pipeline: transcribe, diarize, LLM summary → markdown
+              text       - Generate plain text or markdown transcript (no LLM)
               srt        - Generate SRT subtitles
               vtt        - Generate WebVTT subtitles
               words      - Generate word-by-word JSON with timestamps
@@ -21,7 +22,7 @@ struct Transcribe: AsyncParsableCommand {
             All subcommands support --speakers for speaker diarization.
             """,
         version: "0.2.21",
-        subcommands: [SummarizeCommand.self, SRTCommand.self, VTTCommand.self, WordsCommand.self]
+        subcommands: [SummarizeCommand.self, TextCommand.self, SRTCommand.self, VTTCommand.self, WordsCommand.self]
     )
 
     /// Override the default entry point to handle backward compatibility.
@@ -36,7 +37,7 @@ struct Transcribe: AsyncParsableCommand {
             var args = Array(CommandLine.arguments.dropFirst())
 
             // Only inject "summarize" if user didn't already specify a known subcommand
-            let knownSubcommands: Set<String> = ["summarize", "srt", "vtt", "words", "help"]
+            let knownSubcommands: Set<String> = ["summarize", "text", "srt", "vtt", "words", "help"]
             if args.isEmpty || !knownSubcommands.contains(args[0]) {
                 args.insert("summarize", at: 0)
             }

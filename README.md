@@ -4,6 +4,7 @@ Turn audio and video recordings into structured documents, subtitles, and timest
 
 **What it does:** You give it an audio file from a meeting, interview, or conversation. Depending on the subcommand, it gives you back:
 - **summarize** — A readable document with summary, action items, full transcript, and speaker attribution
+- **text** — Plain text or markdown transcript (no LLM required)
 - **srt** — SRT subtitle files (with optional speaker labels)
 - **vtt** — WebVTT subtitle files (with optional voice spans)
 - **words** — Word-by-word JSON with per-word timestamps
@@ -39,6 +40,9 @@ Basic usage:
 ```bash
 # Generate a meeting summary (full pipeline)
 transcribe summarize meeting.m4a
+
+# Generate a plain text transcript (no LLM needed)
+transcribe text meeting.m4a
 
 # Generate SRT subtitles
 transcribe srt meeting.m4a
@@ -128,7 +132,7 @@ export OLLAMA_MODEL="llama3.2:3b"
 
 ## Features
 
-- **Multiple output formats:** Markdown summaries, SRT subtitles, WebVTT subtitles, word-level JSON
+- **Multiple output formats:** Markdown summaries, plain text/markdown transcripts, SRT subtitles, WebVTT subtitles, word-level JSON, plus docx/odt/pdf/html via pandoc
 - Transcribe audio from any media file (m4a, mp4, wav, mp3, opus, webm)
 - Speaker diarization (who spoke when) with GPU acceleration via Metal on Apple Silicon
 - LLM-powered meeting summaries with action items
@@ -160,13 +164,16 @@ The Python environment for speaker diarization is created automatically on first
 
 ```bash
 transcribe summarize meeting.m4a              # Full pipeline → markdown
+transcribe text meeting.m4a                   # Plain text transcript (no LLM)
+transcribe text meeting.m4a --format md       # Markdown transcript
+transcribe text meeting.m4a -o notes.docx     # Docx via pandoc (format deduced)
 transcribe srt meeting.m4a                    # SRT subtitles
 transcribe vtt meeting.m4a                    # WebVTT subtitles
 transcribe words meeting.m4a                  # Word-by-word JSON
 
 # With speaker labels
 transcribe srt --speakers "Alice,Bob" meeting.m4a
-transcribe vtt --speakers "Alice,Bob" meeting.m4a
+transcribe text --speakers "Alice,Bob" --timestamps meeting.m4a
 
 # Short subtitles for social media
 transcribe srt --max-len 42 video.mp4
@@ -208,6 +215,15 @@ Set a default model in your config file:
 ```yaml
 model: large-v3-turbo
 ```
+
+### Text Flags (text only)
+
+| Flag | Description | Default |
+|------|-------------|---------|
+| `--format` | Output format: txt, md, docx, odt, pdf, html | `txt` |
+| `--timestamps` / `--no-timestamps` | Include timestamps | `false` |
+
+Format is resolved in priority order: explicit `--format` flag > output file extension (from `-o`) > default (`txt`). Formats docx, odt, pdf, and html require [pandoc](https://pandoc.org/) (`brew install pandoc`). PDF also requires a LaTeX engine (`brew install --cask basictex`).
 
 ### Subtitle Flags (srt and vtt only)
 
@@ -300,6 +316,28 @@ Tips for correct speaker assignment:
 
 [00:00:05] **Alice:** Hello everyone...
 [00:00:12] **Bob:** Hi, ready to start.
+```
+
+### Plain Text (text --format txt)
+
+```
+Alice: Hello everyone, welcome.
+Bob: Hi, ready to start.
+```
+
+With timestamps (`--timestamps`):
+
+```
+[00:00:05] Alice: Hello everyone, welcome.
+[00:00:12] Bob: Hi, ready to start.
+```
+
+### Markdown (text --format md)
+
+```markdown
+**Alice:** Hello everyone, welcome.
+
+**Bob:** Hi, ready to start.
 ```
 
 ### SRT (with speakers)
