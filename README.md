@@ -238,6 +238,7 @@ For social media subtitles, try `--max-len 42` for short, readable lines.
 
 | Flag | Description | Default |
 |------|-------------|---------|
+| `--format` | Output format: md, docx, odt, pdf, html | `md` |
 | `-t, --timestamps` | Include timestamps | `true` |
 | `-c, --confidence` | Minimum confidence threshold | `0.8` |
 | `--llm` | LLM provider (claude/openai/ollama/auto) | `auto` |

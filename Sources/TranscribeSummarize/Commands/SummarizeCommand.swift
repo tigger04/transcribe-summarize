@@ -20,6 +20,9 @@ struct SummarizeCommand: AsyncParsableCommand {
 
     @OptionGroup var common: CommonOptions
 
+    @Option(name: .long, help: "Output format: md, docx, odt, pdf, html (default: md)")
+    var format: String?
+
     @Flag(name: [.short, .long], inversion: .prefixedNo, help: "Include timestamps (default: true)")
     var timestamps: Bool = true
 
@@ -33,6 +36,9 @@ struct SummarizeCommand: AsyncParsableCommand {
     var dryRun: Bool = false
 
     mutating func run() async throws {
+        let resolvedFormat = resolveFormat()
+        let outputExt = resolvedFormat.rawValue
+
         let config = try Config.load(
             inputFile: common.inputFile,
             output: common.output,
@@ -51,19 +57,28 @@ struct SummarizeCommand: AsyncParsableCommand {
             throw ExitCode.validationFailure
         }
 
+        // Override output path extension if format differs from default
+        let outputPath: String
+        if resolvedFormat != .md {
+            outputPath = common.resolveOutputPath(defaultExtension: outputExt)
+        } else {
+            outputPath = config.outputPath
+        }
+
         if config.dryRun {
-            try await runDryRun(config: config)
+            try await runDryRun(config: config, format: resolvedFormat, outputPath: outputPath)
             return
         }
 
-        try await runPipeline(config: config)
+        try await runPipeline(config: config, format: resolvedFormat, outputPath: outputPath)
     }
 
-    private func runDryRun(config: Config) async throws {
+    private func runDryRun(config: Config, format: TextWriter.Format, outputPath: String) async throws {
         print("Dry run: would process \(config.inputFile)\n")
 
         print("Configuration:")
-        print("  Output: \(config.outputPath)")
+        print("  Output: \(outputPath)")
+        print("  Output format: \(format.rawValue)")
         print("  Whisper model: \(config.modelName)")
         if config.llm == "auto" {
             let selector = LLMSelector()
@@ -100,6 +115,13 @@ struct SummarizeCommand: AsyncParsableCommand {
         printDependencyStatus("ffmpeg")
         printDependencyStatus("whisper-cpp")
         printDependencyStatus("python3", optional: true, note: "for diarization")
+        if format.requiresPandoc {
+            let pandocAvailable = PandocConverter.isAvailable()
+            let status = pandocAvailable ? "✓" : "✗"
+            var line = "  \(status) pandoc (required for \(format.rawValue) output)"
+            if !pandocAvailable { line += " — MISSING (brew install pandoc)" }
+            print(line)
+        }
         print()
 
         print("Secrets:")
@@ -112,7 +134,7 @@ struct SummarizeCommand: AsyncParsableCommand {
         printCommandStatus("hf_token")
     }
 
-    private func runPipeline(config: Config) async throws {
+    private func runPipeline(config: Config, format: TextWriter.Format, outputPath: String) async throws {
         var tempFiles: [String] = []
         defer {
             for file in tempFiles {
@@ -188,16 +210,29 @@ struct SummarizeCommand: AsyncParsableCommand {
         }
 
         // Step 5: Write output
-        print("Writing output...")
         let writer = MarkdownWriter(
             confidenceThreshold: config.confidence,
             includeTimestamps: config.timestamps,
             includeLowConfidence: true
         )
 
-        try writer.write(summary: summary, segments: segments, to: config.outputPath)
+        if format.requiresPandoc {
+            // Pandoc path: write markdown to temp file, then convert
+            let tempMdPath = FileManager.default.temporaryDirectory
+                .appendingPathComponent("\(UUID().uuidString).md").path
+            tempFiles.append(tempMdPath)
 
-        print("Output written to: \(config.outputPath)")
+            print("Writing markdown...")
+            try writer.write(summary: summary, segments: segments, to: tempMdPath)
+
+            print("Converting to \(format.rawValue)...")
+            try PandocConverter.convert(from: tempMdPath, to: outputPath, format: format)
+        } else {
+            print("Writing output...")
+            try writer.write(summary: summary, segments: segments, to: outputPath)
+        }
+
+        print("Output written to: \(outputPath)")
     }
 
     private func printDependencyStatus(_ name: String, optional: Bool = false, note: String? = nil) {
@@ -216,6 +251,23 @@ struct SummarizeCommand: AsyncParsableCommand {
         if let note = note { line += " (\(note))" }
         if !exists && required { line += " — NOT SET" }
         print(line)
+    }
+
+    /// Resolve format from: explicit flag > output extension > default (md).
+    private func resolveFormat() -> TextWriter.Format {
+        // Explicit --format flag
+        if let explicit = format,
+           let fmt = TextWriter.Format(rawValue: explicit.lowercased()) {
+            return fmt
+        }
+
+        // Deduce from --output extension
+        if let outputArg = common.output,
+           let deduced = TextWriter.deduceFormat(from: outputArg) {
+            return deduced
+        }
+
+        return .md
     }
 
     private func printCommandStatus(_ configKey: String) {
