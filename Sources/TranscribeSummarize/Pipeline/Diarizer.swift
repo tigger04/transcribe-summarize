@@ -209,15 +209,20 @@ struct Diarizer {
         return venvPath().appendingPathComponent("bin/python3").path
     }
 
-    private func findDiariseScript() -> String {
-        let candidates = [
+    /// Candidate paths searched in priority order for the diarization script.
+    static let diariseScriptCandidates: [String] = {
+        let home = FileManager.default.homeDirectoryForCurrentUser.path
+        return [
             Bundle.main.bundlePath + "/scripts/diarize.py",
             "./scripts/diarize.py",
-            "/opt/homebrew/share/transcribe-summarize/diarize.py",  // ARM Mac
-            "/usr/local/share/transcribe-summarize/diarize.py"      // Intel Mac
+            "\(home)/.local/share/transcribe-summarize/diarize.py",  // make install
+            "/opt/homebrew/share/transcribe-summarize/diarize.py",   // ARM Mac Homebrew
+            "/usr/local/share/transcribe-summarize/diarize.py"       // Intel Mac Homebrew
         ]
+    }()
 
-        for path in candidates {
+    private func findDiariseScript() -> String {
+        for path in Self.diariseScriptCandidates {
             if FileManager.default.fileExists(atPath: path) {
                 return path
             }
