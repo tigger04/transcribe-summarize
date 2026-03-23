@@ -63,6 +63,7 @@ struct TextCommand: AsyncParsableCommand {
         }
 
         // Step 4: Write output
+        try backupIfExists(at: outputPath)
         if resolvedFormat.requiresPandoc {
             // Pandoc path: generate markdown first, then convert
             let tempMdPath = FileManager.default.temporaryDirectory

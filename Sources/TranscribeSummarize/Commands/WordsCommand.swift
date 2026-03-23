@@ -61,12 +61,14 @@ struct WordsCommand: AsyncParsableCommand {
             let diarizedSegments = try await diarizer.diarize(wavPath: wavPath, segments: segments)
 
             print("Merging speaker labels...")
+            try backupIfExists(at: outputPath)
             try mergeSpakersIntoJSON(
                 jsonPath: jsonPath,
                 segments: diarizedSegments,
                 outputPath: outputPath
             )
         } else {
+            try backupIfExists(at: outputPath)
             try FileManager.default.copyItem(atPath: jsonPath, toPath: outputPath)
         }
 

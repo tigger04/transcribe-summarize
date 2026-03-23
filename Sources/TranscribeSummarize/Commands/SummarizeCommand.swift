@@ -210,6 +210,7 @@ struct SummarizeCommand: AsyncParsableCommand {
         }
 
         // Step 5: Write output
+        try backupIfExists(at: outputPath)
         let writer = MarkdownWriter(
             confidenceThreshold: config.confidence,
             includeTimestamps: config.timestamps,

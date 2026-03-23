@@ -60,6 +60,7 @@ struct SRTCommand: AsyncParsableCommand {
             segments = try await diarizer.diarize(wavPath: wavPath, segments: segments)
 
             print("Writing SRT...")
+            try backupIfExists(at: outputPath)
             let writer = SRTWriter()
             try writer.write(segments: segments, to: outputPath)
         } else {
@@ -75,6 +76,7 @@ struct SRTCommand: AsyncParsableCommand {
                 splitOnWord: splitOnWord
             )
             tempFiles.append(srtPath)
+            try backupIfExists(at: outputPath)
             try FileManager.default.copyItem(atPath: srtPath, toPath: outputPath)
         }
 

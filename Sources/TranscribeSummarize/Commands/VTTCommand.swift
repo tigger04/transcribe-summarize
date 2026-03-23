@@ -60,6 +60,7 @@ struct VTTCommand: AsyncParsableCommand {
             segments = try await diarizer.diarize(wavPath: wavPath, segments: segments)
 
             print("Writing VTT...")
+            try backupIfExists(at: outputPath)
             let writer = VTTWriter()
             try writer.write(segments: segments, to: outputPath)
         } else {
@@ -75,6 +76,7 @@ struct VTTCommand: AsyncParsableCommand {
                 splitOnWord: splitOnWord
             )
             tempFiles.append(vttPath)
+            try backupIfExists(at: outputPath)
             try FileManager.default.copyItem(atPath: vttPath, toPath: outputPath)
         }
 
