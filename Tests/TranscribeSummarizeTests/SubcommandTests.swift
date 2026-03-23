@@ -226,6 +226,41 @@ final class SubcommandTests: XCTestCase {
         XCTAssertFalse(args.contains("-sow"), "Should not include -sow when maxLen is 0")
     }
 
+    // MARK: - Subtitle Default Max Length Tests
+
+    /// RT-035: Default maxLen for subtitles is 48
+    func testSubtitleDefaultMaxLenIs48_RT035() {
+        // The SRT and VTT commands should default to maxLen 48.
+        // We verify this by checking that buildWhisperArgs with maxLen=48
+        // includes -ml 48.
+        let transcriber = Transcriber(model: .known(.tiny), verbose: 0)
+        let args = transcriber.buildWhisperArgs(
+            modelPath: "/models/ggml-tiny.bin",
+            wavPath: "/tmp/test.wav",
+            maxLen: 48,
+            splitOnWord: true
+        )
+
+        XCTAssertTrue(args.contains("-ml"), "Should include -ml flag for default 48")
+        if let idx = args.firstIndex(of: "-ml") {
+            XCTAssertEqual(args[args.index(after: idx)], "48", "Default maxLen should be 48")
+        }
+        XCTAssertTrue(args.contains("-sow"), "Should include -sow with default splitOnWord")
+    }
+
+    /// RT-036: Explicit maxLen=0 produces unlimited (no -ml flag)
+    func testSubtitleMaxLenZeroIsUnlimited_RT036() {
+        let transcriber = Transcriber(model: .known(.tiny), verbose: 0)
+        let args = transcriber.buildWhisperArgs(
+            modelPath: "/models/ggml-tiny.bin",
+            wavPath: "/tmp/test.wav",
+            maxLen: 0,
+            splitOnWord: false
+        )
+
+        XCTAssertFalse(args.contains("-ml"), "maxLen=0 should not include -ml (unlimited)")
+    }
+
     // MARK: - Helper
 
     /// Mirrors the output path resolution logic used by subcommands.

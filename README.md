@@ -175,8 +175,8 @@ transcribe words meeting.m4a                  # Word-by-word JSON
 transcribe srt --speakers "Alice,Bob" meeting.m4a
 transcribe text --speakers "Alice,Bob" --timestamps meeting.m4a
 
-# Short subtitles for social media
-transcribe srt --max-len 42 video.mp4
+# Unlimited subtitle line length (default is 48 chars)
+transcribe srt --max-len 0 video.mp4
 
 # With options
 transcribe summarize meeting.m4a -o summary.md --model medium -v
@@ -229,10 +229,10 @@ Format is resolved in priority order: explicit `--format` flag > output file ext
 
 | Flag | Description | Default |
 |------|-------------|---------|
-| `--max-len N` | Maximum subtitle line length in characters | `0` (unlimited) |
+| `--max-len N` | Maximum subtitle line length in characters (0 = unlimited) | `48` |
 | `--split-on-word` / `--no-split-on-word` | Split at word boundaries when using `--max-len` | `true` |
 
-For social media subtitles, try `--max-len 42` for short, readable lines.
+Use `--max-len 0` for unlimited line length.
 
 ### Summarize-specific Flags
 

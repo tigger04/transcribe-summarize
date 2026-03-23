@@ -12,8 +12,8 @@ struct SRTCommand: AsyncParsableCommand {
 
     @OptionGroup var common: CommonOptions
 
-    @Option(name: .long, help: "Maximum subtitle line length in characters (0 = unlimited)")
-    var maxLen: Int = 0
+    @Option(name: .long, help: "Maximum subtitle line length in characters (default: 48, 0 = unlimited)")
+    var maxLen: Int = 48
 
     @Flag(inversion: .prefixedNo, help: "Split at word boundaries when using --max-len (default: true)")
     var splitOnWord: Bool = true
