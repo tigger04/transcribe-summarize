@@ -111,6 +111,25 @@ final class SubcommandTests: XCTestCase {
         }
     }
 
+    /// RT-029: DTW preset converts hyphens to dots for whisper-cli
+    func testDtwPresetConvertsToDotNotation_RT029() {
+        // Arrange
+        let customModel = Transcriber.ModelSpec.custom("large-v3-turbo")
+        let knownModel = Transcriber.ModelSpec.known(.small)
+
+        // Assert
+        XCTAssertEqual(customModel.dtwPreset, "large.v3.turbo",
+                       "DTW preset should use dots, not hyphens")
+        XCTAssertEqual(knownModel.dtwPreset, "small",
+                       "Known models should pass through unchanged")
+    }
+
+    /// RT-030: DTW preset for models with multiple hyphens
+    func testDtwPresetMultipleHyphens_RT030() {
+        let model = Transcriber.ModelSpec.custom("large-v3-turbo-q5")
+        XCTAssertEqual(model.dtwPreset, "large.v3.turbo.q5")
+    }
+
     func testConfigResolvesCustomModel() throws {
         let config = try Config.load(
             inputFile: "/path/to/meeting.m4a",

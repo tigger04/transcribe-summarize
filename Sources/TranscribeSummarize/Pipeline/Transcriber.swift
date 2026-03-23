@@ -67,6 +67,9 @@ struct Transcriber {
             }
         }
 
+        /// DTW preset name for whisper-cli (uses dots, not hyphens).
+        var dtwPreset: String { name.replacingOccurrences(of: "-", with: ".") }
+
         var filename: String { "ggml-\(name).bin" }
     }
 
@@ -189,7 +192,7 @@ struct Transcriber {
 
         // For word-level JSON, enable dynamic time warping for token timestamps
         if format == .jsonFull {
-            args += ["--dtw", modelSpec.name]
+            args += ["--dtw", modelSpec.dtwPreset]
         }
 
         if verbose > 0 {
